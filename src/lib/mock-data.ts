@@ -15,6 +15,29 @@ export const PIPELINE: { id: Stage; label: string }[] = [
   { id: "closed", label: "Closed" },
 ];
 
+// 3-tier status semantics: Ash = neutral (not yet active), Amber = active
+// (in motion), Contour = resolved (positive). Signal never marks status —
+// it is reserved for interactive elements.
+export type Tier = "neutral" | "active" | "resolved";
+
+export const TIER_OF_STAGE: Record<Stage, Tier> = {
+  submitted: "neutral",
+  "under-review": "active",
+  "site-visit": "active",
+  "report-issued": "resolved",
+  closed: "resolved",
+};
+
+export const TIERS: { id: Tier; label: string }[] = [
+  { id: "neutral", label: "Neutral" },
+  { id: "active", label: "Active" },
+  { id: "resolved", label: "Resolved" },
+];
+
+export function stageIndex(stage: Stage): number {
+  return PIPELINE.findIndex((s) => s.id === stage);
+}
+
 export type DocumentItem = {
   name: string;
   kind: string;

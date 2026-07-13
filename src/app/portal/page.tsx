@@ -3,15 +3,9 @@ import AppShell from "@/components/AppShell";
 import StatusChip from "@/components/StatusChip";
 import { applicationsForClient } from "@/lib/mock-data";
 import { DEMO_ACCOUNTS } from "@/lib/session";
+import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Client portal" };
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function formatDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
-  return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
-}
 
 // Placeholder dashboard — the full single-application view (stage stepper,
 // documents, activity feed) is Phase 3.

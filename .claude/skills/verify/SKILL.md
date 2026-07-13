@@ -27,4 +27,6 @@ From the E:\Claude\Local session, a launch.json entry named `agv-portal` starts 
 ## Gotchas
 
 - Browser-pane screenshots can wedge (30s timeouts) while JS eval keeps working — verify state via `javascript_tool` reading `window.location.pathname`, `document.title`, and the `agv-demo-session` localStorage key instead.
+- Root cause of the above: the pane's page can report `document.visibilityState === "hidden"`, which pauses rAF. Consequences: framer-motion animations stall (entrance opacity stays 0, AnimatePresence exits never unmount, screenshot capture hangs waiting for a frame), and Chromium prunes opacity-0 subtrees from the accessibility tree so `read_page` misses them. Verify via state-driven text (e.g. the table's aria-live "N of M shown"), not DOM row counts.
+- After dispatching a click via JS, wait ~250ms before reading the DOM — React's render lands after the current script tick, so same-script reads see stale DOM and look like the click never fired.
 - Header buttons sit at identical coordinates on /admin and /portal — a double-dispatched click can toggle the role twice and look like a no-op. Confirm outcomes via localStorage, not clicks alone.

@@ -11,10 +11,8 @@ import { Wordmark } from "@/components/Logo";
 import QuickSwitch from "@/components/QuickSwitch";
 import TopoField from "@/components/TopoField";
 
-const ROLE_CHIP: Record<Role, string> = {
-  admin: "border-signal/40 text-signal",
-  client: "border-contour/40 text-contour",
-};
+// The role chip is informational, not clickable — kept neutral so Signal
+// stays exclusive to interactive elements (and Contour to resolved states).
 
 export default function AppShell({
   expect,
@@ -54,9 +52,7 @@ export default function AppShell({
             <span className="hidden font-mono text-[11px] text-ash lg:inline">
               {account.name} · {account.org}
             </span>
-            <span
-              className={`rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] ${ROLE_CHIP[account.role]}`}
-            >
+            <span className="rounded-full border border-ash/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone">
               {account.role}
             </span>
             <QuickSwitch />
