@@ -38,10 +38,10 @@ export default function AdminDashboard() {
       </motion.div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <motion.div {...enter(1)} className="lg:col-span-3">
+        <motion.div {...enter(1)} className="min-w-0 lg:col-span-3">
           <PipelineFunnel />
         </motion.div>
-        <motion.div {...enter(2)} className="lg:col-span-2">
+        <motion.div {...enter(2)} className="min-w-0 lg:col-span-2">
           <SectorBars />
         </motion.div>
       </div>

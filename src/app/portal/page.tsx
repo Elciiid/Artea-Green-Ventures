@@ -1,62 +1,44 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
-import StatusChip from "@/components/StatusChip";
+import ApplicationDetail from "@/components/ApplicationDetail";
+import TopoField from "@/components/TopoField";
 import { applicationsForClient } from "@/lib/mock-data";
 import { DEMO_ACCOUNTS } from "@/lib/session";
-import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Client portal" };
 
-// Placeholder dashboard — the full single-application view (stage stepper,
-// documents, activity feed) is Phase 3.
+// The client has exactly one application, so /portal is its full detail
+// view (read-only ApplicationDetail; admin edit controls arrive in Phase 4).
 export default function PortalPage() {
   const app = applicationsForClient(DEMO_ACCOUNTS.client.email)[0];
 
   return (
     <AppShell expect="client">
       <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-contour">
-        Client portal
-      </p>
-      <h1 className="mt-3 font-display text-4xl font-black tracking-[-0.02em] text-bone sm:text-5xl">
-        Your application
-      </h1>
-      <p className="mt-4 max-w-xl text-sm leading-relaxed text-ash">
-        Live status for your engagement with Artea Green Ventures. The full
-        tracking view — stage timeline, documents and activity — arrives in
-        Phase 3.
+        Client portal — {DEMO_ACCOUNTS.client.org}
       </p>
 
-      <div className="mt-10 max-w-2xl rounded-xl border border-ash/15 bg-pine p-6 sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="font-mono text-[11px] tracking-[0.14em] text-ash">
-            {app.id}
-          </span>
-          <StatusChip stage={app.stage} note={app.statusNote} />
+      {app ? (
+        <div className="mt-4">
+          <ApplicationDetail app={app} />
         </div>
-
-        <h2 className="mt-5 font-display text-2xl font-extrabold tracking-[-0.01em] text-bone">
-          {app.title}
-        </h2>
-        <p className="mt-1 text-sm text-ash">{app.service}</p>
-
-        <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-ash/10 pt-6 sm:grid-cols-4">
-          <Meta k="Sector" v={app.sector} />
-          <Meta k="Location" v={app.location} />
-          <Meta k="AGV lead" v={app.lead} />
-          <Meta k="Submitted" v={formatDate(app.submitted)} />
-        </dl>
-      </div>
+      ) : (
+        <div className="relative mt-10 overflow-hidden rounded-xl border border-dashed border-ash/25 py-20 text-center">
+          <TopoField
+            className="opacity-30"
+            seed={47}
+            peaks={[{ cx: 720, cy: 450, r0: 55, rings: 5, gap: 44 }]}
+          />
+          <div className="relative">
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ash">
+              No active application
+            </p>
+            <p className="mt-2 text-sm text-ash/80">
+              Your submissions will appear here once received.
+            </p>
+          </div>
+        </div>
+      )}
     </AppShell>
-  );
-}
-
-function Meta({ k, v }: { k: string; v: string }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-ash">
-        {k}
-      </dt>
-      <dd className="mt-1.5 text-sm text-bone">{v}</dd>
-    </div>
   );
 }

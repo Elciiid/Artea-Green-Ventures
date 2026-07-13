@@ -1,34 +1,28 @@
-import { contourPaths } from "@/lib/topo";
+import Image from "next/image";
+import logo from "../../public/images/Artea Logo Assets-09.avif";
 
-// The mark is three nested contour rings — the motif at monogram scale.
-// Generated once at module load with a fixed seed, so it's stable.
-const RINGS = contourPaths({ cx: 32, cy: 34, r0: 8, rings: 3, gap: 9, amp: 0.18 }, 11);
+// Real brand asset: a white knockout lockup on a transparent background
+// (266×85 AVIF, verified by pixel-sampling) — it reads directly on the
+// dark theme, so no plate or recolor treatment is needed. The "Field
+// Portal" tag names the product beside the company lockup.
 
-export function Mark({ className = "h-6 w-6" }: { className?: string }) {
+export function Wordmark({ hideTagOnMobile = false }: { hideTagOnMobile?: boolean }) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" aria-hidden className={className}>
-      {RINGS.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          stroke="var(--color-signal)"
-          strokeWidth={3.4 - i * 0.7}
-          opacity={1 - i * 0.3}
-        />
-      ))}
-    </svg>
-  );
-}
-
-export function Wordmark({ hideTextOnMobile = false }: { hideTextOnMobile?: boolean }) {
-  return (
-    <span className="flex items-center gap-2.5">
-      <Mark className="h-7 w-7" />
-      <span className={`leading-none ${hideTextOnMobile ? "hidden sm:block" : ""}`}>
-        <span className="block font-mono text-[9px] uppercase tracking-[0.28em] text-ash">
-          Artea Green Ventures
-        </span>
-        <span className="mt-1 block font-display text-[13px] font-extrabold uppercase tracking-[0.04em] text-bone">
+    <span className="flex items-center gap-3">
+      {/* explicit dimensions: Turbopack can't probe AVIF, so the static
+          import carries placeholder 100×100 attrs — these override them
+          with the real 266×85 so pre-load layout keeps the true ratio */}
+      <Image
+        src={logo}
+        alt="Artea Green Ventures"
+        width={266}
+        height={85}
+        priority
+        className="h-6 w-auto sm:h-7"
+      />
+      <span className={`items-center gap-3 ${hideTagOnMobile ? "hidden sm:flex" : "flex"}`}>
+        <span aria-hidden className="h-5 w-px bg-ash/25" />
+        <span className="font-display text-[11px] font-extrabold uppercase tracking-[0.08em] text-bone">
           Field Portal
         </span>
       </span>

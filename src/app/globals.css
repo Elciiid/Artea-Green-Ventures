@@ -36,6 +36,29 @@ body {
   outline-offset: 2px;
 }
 
+/* stepper: pulsing ring on the current stage (Amber) */
+@keyframes step-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(232, 169, 76, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(232, 169, 76, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 169, 76, 0);
+  }
+}
+
+.step-pulse {
+  animation: step-pulse 2.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-pulse {
+    animation: none;
+  }
+}
+
 /* very quiet film grain over everything */
 .noise {
   position: fixed;

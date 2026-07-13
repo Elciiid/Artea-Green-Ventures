@@ -43,6 +43,8 @@ export type DocumentItem = {
   kind: string;
   size: string;
   status: "received" | "pending";
+  /** ISO date; absent while the document is still pending */
+  uploaded?: string;
 };
 
 export type TimelineEntry = {
@@ -86,10 +88,10 @@ export const APPLICATIONS: Application[] = [
     clientAccountEmail: "client@agv-demo.com",
     submitted: "2026-06-18",
     documents: [
-      { name: "EIS Addendum — Rev B.pdf", kind: "Assessment", size: "14.2 MB", status: "received" },
-      { name: "Noise & Vibration Monitoring Plan.pdf", kind: "Plan", size: "3.8 MB", status: "received" },
+      { name: "EIS Addendum — Rev B.pdf", kind: "Assessment", size: "14.2 MB", status: "received", uploaded: "2026-07-02" },
+      { name: "Noise & Vibration Monitoring Plan.pdf", kind: "Plan", size: "3.8 MB", status: "received", uploaded: "2026-06-20" },
       { name: "Groundwater Baseline Data.xlsx", kind: "Dataset", size: "—", status: "pending" },
-      { name: "Site Access Deed.pdf", kind: "Legal", size: "1.1 MB", status: "received" },
+      { name: "Site Access Deed.pdf", kind: "Legal", size: "1.1 MB", status: "received", uploaded: "2026-06-18" },
     ],
     timeline: [
       { at: "2026-06-18", actor: "System", kind: "system", text: "Application received via portal." },
@@ -113,10 +115,10 @@ export const APPLICATIONS: Application[] = [
     clientName: "WHT Delivery Consortium",
     submitted: "2026-03-02",
     documents: [
-      { name: "ESG Framework Mapping.pdf", kind: "Assessment", size: "8.6 MB", status: "received" },
-      { name: "Spoil Management Records — Q1.zip", kind: "Dataset", size: "112 MB", status: "received" },
-      { name: "Marine Water Quality Logs.xlsx", kind: "Dataset", size: "9.4 MB", status: "received" },
-      { name: "Final ESG Verification Report.pdf", kind: "Report", size: "22.7 MB", status: "received" },
+      { name: "ESG Framework Mapping.pdf", kind: "Assessment", size: "8.6 MB", status: "received", uploaded: "2026-03-04" },
+      { name: "Spoil Management Records — Q1.zip", kind: "Dataset", size: "112 MB", status: "received", uploaded: "2026-03-15" },
+      { name: "Marine Water Quality Logs.xlsx", kind: "Dataset", size: "9.4 MB", status: "received", uploaded: "2026-04-02" },
+      { name: "Final ESG Verification Report.pdf", kind: "Report", size: "22.7 MB", status: "received", uploaded: "2026-06-11" },
     ],
     timeline: [
       { at: "2026-03-02", actor: "System", kind: "system", text: "Application received via portal." },
@@ -140,7 +142,7 @@ export const APPLICATIONS: Application[] = [
     clientName: "National Housing Authority (PH)",
     submitted: "2026-07-06",
     documents: [
-      { name: "Flood Impact Assessment — ToR.pdf", kind: "Scope", size: "2.4 MB", status: "received" },
+      { name: "Flood Impact Assessment — ToR.pdf", kind: "Scope", size: "2.4 MB", status: "received", uploaded: "2026-07-06" },
       { name: "Flood-plain Survey (2026).pdf", kind: "Survey", size: "—", status: "pending" },
       { name: "Barangay Clearance.pdf", kind: "Legal", size: "—", status: "pending" },
     ],

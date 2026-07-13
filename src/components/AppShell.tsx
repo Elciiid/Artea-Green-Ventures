@@ -46,13 +46,13 @@ export default function AppShell({
       <header className="relative z-10 border-b border-ash/10 bg-void/70 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-6">
           <Link href={roleHome(account.role)} className="shrink-0">
-            <Wordmark hideTextOnMobile />
+            <Wordmark hideTagOnMobile />
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <span className="hidden font-mono text-[11px] text-ash lg:inline">
               {account.name} · {account.org}
             </span>
-            <span className="rounded-full border border-ash/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone">
+            <span className="hidden rounded-full border border-ash/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone sm:inline-block">
               {account.role}
             </span>
             <QuickSwitch />
