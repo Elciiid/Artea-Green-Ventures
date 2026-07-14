@@ -90,13 +90,15 @@ export default function LoginPage() {
             sizes="(max-width: 1024px) 100vw, 55vw"
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-void via-void/75 to-void/25" />
-          <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/50" />
+          {/* Legibility only — kept light. The art is already near-black
+              (0.09 mean luminance), so an opaque scrim erases it entirely. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-void/75 via-void/35 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-void/70 via-transparent to-transparent" />
         </div>
 
         {/* the SVG motif still drives the pointer parallax, kept quiet so it
             reads with the art rather than competing with it */}
-        <TopoField parallax draw className="opacity-35" />
+        <TopoField parallax draw className="opacity-20" />
 
         <motion.div
           variants={stagger}
