@@ -7,6 +7,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import SitePhoto from "@/components/SitePhoto";
 import StatusChip from "@/components/StatusChip";
 import TopoField from "@/components/TopoField";
 import { formatDate } from "@/lib/format";
@@ -72,7 +73,16 @@ export default function ApplicationGallery({
               {...enter(i + 1)}
               className="group relative block overflow-hidden rounded-xl border border-ash/15 bg-pine p-6 transition-colors hover:border-signal/40 sm:p-8"
             >
-              {/* each site gets its own terrain, seeded from the case id */}
+              {/* treated site photo on the right, fading into the panel */}
+              <SitePhoto
+                src={app.hero}
+                priority={i === 0}
+                sizes="(max-width: 640px) 70vw, 420px"
+                className="absolute inset-y-0 right-0 w-2/3 opacity-70 transition-opacity duration-500 [mask-image:linear-gradient(to_left,black_5%,transparent_85%)] group-hover:opacity-90 sm:w-1/2"
+              />
+
+              {/* contour lines ride over the photo — each site gets its own
+                  terrain, seeded from the case id */}
               <TopoField
                 className="opacity-40 transition-opacity duration-500 [mask-image:linear-gradient(to_left,black_15%,transparent_70%)] group-hover:opacity-75"
                 seed={Number(app.id.slice(-4)) || 7}

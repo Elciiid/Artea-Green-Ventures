@@ -4,6 +4,7 @@
 // on the right. Mock auth: either demo address, any password.
 
 import { useEffect, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import TopoField from "@/components/TopoField";
@@ -77,7 +78,25 @@ export default function LoginPage() {
     <main className="relative min-h-dvh lg:grid lg:grid-cols-[1.15fr_1fr]">
       {/* ——— terrain canvas ——— */}
       <section className="relative flex min-h-[55dvh] flex-col justify-between gap-10 overflow-hidden p-6 sm:p-10 lg:min-h-dvh">
-        <TopoField parallax draw />
+        {/* The hero art is generated to the palette (near-black, glowing
+            contours), so it runs unfiltered — no photo treatment. The
+            gradients below are for text legibility only. */}
+        <div aria-hidden className="absolute inset-0">
+          <Image
+            src="/images/site/login-hero.jfif"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 55vw"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-void via-void/75 to-void/25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/50" />
+        </div>
+
+        {/* the SVG motif still drives the pointer parallax, kept quiet so it
+            reads with the art rather than competing with it */}
+        <TopoField parallax draw className="opacity-35" />
 
         <motion.div
           variants={stagger}

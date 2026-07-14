@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import SitePhoto from "@/components/SitePhoto";
 import StatusChip from "@/components/StatusChip";
 import { useApplications } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
@@ -79,17 +80,27 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
   return (
     <div>
       {/* ——— header ——— */}
-      <motion.div {...enter(0)}>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="font-mono text-[11px] tracking-[0.14em] text-ash">{app.id}</span>
-          <StatusChip stage={app.stage} note={app.statusNote} />
-        </div>
-        <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.02em] text-bone sm:text-4xl lg:text-5xl">
-          {app.title}
-        </h1>
-        <p className="mt-2 text-sm text-ash">{app.service}</p>
+      <motion.div {...enter(0)} className="relative">
+        {/* treated site photo as a quiet accent behind the title */}
+        <SitePhoto
+          src={app.hero}
+          priority
+          sizes="(max-width: 1024px) 40vw, 420px"
+          className="absolute right-0 top-0 hidden h-40 w-1/2 opacity-55 [mask-image:linear-gradient(to_left,black_5%,transparent_80%)] sm:block"
+        />
 
-        <dl className="mt-7 grid max-w-3xl grid-cols-2 gap-x-6 gap-y-5 border-t border-ash/10 pt-6 sm:grid-cols-3">
+        <div className="relative">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-mono text-[11px] tracking-[0.14em] text-ash">{app.id}</span>
+            <StatusChip stage={app.stage} note={app.statusNote} />
+          </div>
+          <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.02em] text-bone sm:text-4xl lg:text-5xl">
+            {app.title}
+          </h1>
+          <p className="mt-2 text-sm text-ash">{app.service}</p>
+        </div>
+
+        <dl className="relative mt-7 grid max-w-3xl grid-cols-2 gap-x-6 gap-y-5 border-t border-ash/10 pt-6 sm:grid-cols-3">
           <Meta k="Sector" v={app.sector} />
           <Meta k="Location" v={app.location} />
           <Meta k="Client" v={app.clientName} />

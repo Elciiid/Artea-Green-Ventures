@@ -1,54 +1,44 @@
 # AGV Portal — Status
-Updated: 2026-07-14 21:47
-Phase: Phase 6 — Multi-User Access, Visibility & "Client" → "User" Rename
+Updated: 2026-07-14 22:39
+Phase: Phase 8 (final) — Sydney Gateway Swap + Hero Imagery with Corrected Treatment
 State: complete
 
 ## Done this session
-- Terminology fix: the portal role is now `user`, not `client`, everywhere it refers to who's using the app
-  - `Role` type `'admin' | 'client'` → `'admin' | 'user'`; `switchRole` → `switchAccount`; `ClientPortalView` → `UserPortalView`; `expect="client"` → `expect="user"`
-  - UI copy updated: role chip (USER), login rows, quick-switch — all read "User"
-  - Left untouched: the application `clientName` field and its "Client:" meta label (the real-world engaging organization — different concept)
-  - Dropped the "Transport for NSW contact" framing; demo users are AGV staff granted access to engagements
-- Three demo accounts (was two): admin (A. Mercer), user1 (S. Whitfield), user2 (R. Santiago) — login rows + quick-switch (now cycles all 3) reflect them
-- Data model: extended the reactive store with a `users` collection (id/email, name, role, `visibleApplicationIds`) + a `toggleVisibility(userId, appId)` action; seeded with user1 → Parramatta + Western Harbour, user2 → Manila. Added pure helpers `visibleApplicationsFor` / `isApplicationVisible`. `resetDemo` and persistence now cover users too
-- Generalized the gallery: extracted `ApplicationGallery` (eyebrow/title/subtitle/applications/hrefBase/emptyState props) from the admin dashboard; both `/admin` and `/portal` now reuse it — no duplicated card markup
-- `/portal` renders `UserPortalView` — a gallery of only the signed-in user's visible applications, with a plain empty state for zero-visibility (not hit by either demo account today)
-- `/portal/applications/[id]` (new) renders the shared `ApplicationDetail` read-only via `UserApplicationView`, with an authorization check — a user hitting an application outside their visible list gets a "Not available" state instead of the content
-- `/admin/access` (new): a users × applications checkbox matrix, instant-apply toggles (no save step), Signal on the checked/active cell, live "N of 3 visible" per row. Added an admin nav strip (Applications | Access tabs, active-state via pathname) between the two views in the shell
-- Admin still sees all 3 applications regardless of visibility settings
-- Verified end-to-end in the browser (details below); build clean, zero console errors
+- **Content swap:** Application #3 (previously the Manila social-housing flood assessment) is now **Sydney Gateway — Environmental Compliance Audit** · Transportation · Sydney, AU · Transport for NSW · stage *Submitted / Pending documents* (pipeline spread preserved: Under Review / Report Issued / Submitted)
+  - New case ID `AGV-2026-0161` following the existing `AGV-2026-nnnn` convention; submitted 08 Jul 2026; coordinates -33.9268 / 151.1710 (St Peters / airport interchange)
+  - Lead kept as R. Santiago — user2 *is* R. Santiago, so the assigned staff member remains the project lead, which keeps the access-matrix story coherent
+  - Invented documents (EIS Rev A received; Air Quality & Noise Assessment and St Peters Contaminated Land Survey pending) and a 3-entry timeline, matching the tone/detail of the other two applications
+  - Visibility slot untouched: user2 still has exactly this one application; user1 still has Parramatta + Western Harbour
+- **Identifier rename:** the routing identifier for an application *is* its case ID, so `AGV-2026-0155` → `AGV-2026-0161` everywhere it's used — routes (`/admin/applications/[id]`, `/portal/applications/[id]` both prerender the new ID), the store's seeded `visibleApplicationIds`, and the hero filename mapping (`app-sydney-gateway-hero.*`). Repo-wide case-insensitive grep for `manila` now returns **only** this STATUS.md changelog line — no live code, data, routes or assets
+- **Persisted-state migration:** bumped the applications store to `version: 2` with a `migrate` that re-seeds. Without it, any browser holding demo state from a previous session would have resurrected the deleted Manila record (and pointed user2's visibility at a dead ID). Verified by planting a stale v1 store containing Manila and confirming it was discarded and re-seeded
+- **Hero imagery wired up, with the treatment split corrected:**
+  - `login-hero.jfif` (1376×768, mean luminance 0.09) is Gemini-generated glowing-contour terrain already in-palette → used **unfiltered**; only legibility gradients sit over it. The SVG TopoField motif is kept at reduced opacity so the pointer parallax still works without competing with the art
+  - `app-parramatta-hero`, `app-western-harbour-hero`, `app-sydney-gateway-hero` are real daylight site photography (a red-liveried light rail tram, an aerial of the Harbour Bridge, the Sydney Gateway bridge) at luminance 0.19–0.47 → run through the full `SitePhoto` treatment: `grayscale contrast-125 brightness-[0.42]`, a Contour duotone via `mix-blend-color` at 60%, then a Void wash at 45%
+  - Photos appear as masked accent panels on the gallery cards (contour lines riding over them) and as a quiet accent behind the detail-page title
+- Verified end-to-end in the browser: correct photo per application and treatment applied (login hero confirmed *without* it), full Sydney Gateway content on the detail page, user2's portal showing exactly Sydney Gateway, stale-store migration, no horizontal overflow at 375px, zero console errors, clean build
 
 ## Files added/changed
-- `src/lib/session.ts` — Role rename; `DEMO_ACCOUNTS` now a 3-entry array of AGV staff (id/role/email/name/title); `accountByEmail`, `nextAccount`, `switchAccount` (cycles)
-- `src/lib/applications.ts` — `users` collection + `PortalUser` type, `toggleVisibility`, `visibleApplicationsFor`/`isApplicationVisible`, users in resetDemo + persistence
-- `src/lib/mock-data.ts` — removed the obsolete `clientAccountEmail` field + `applicationsForClient` helper (kept `clientName`)
-- `src/components/ApplicationGallery.tsx` — new; the shared gallery
-- `src/components/admin/AdminDashboard.tsx` — thin wrapper over ApplicationGallery (all apps)
-- `src/components/UserPortalView.tsx` — new; portal gallery of visible apps (replaces ClientPortalView, now deleted)
-- `src/components/UserApplicationView.tsx` — new; read-only detail with visibility auth check
-- `src/app/portal/page.tsx` — renders UserPortalView
-- `src/app/portal/applications/[id]/page.tsx` — new; user detail route
-- `src/components/admin/AccessMatrix.tsx` + `src/app/admin/access/page.tsx` — new; visibility matrix + route
-- `src/components/AppShell.tsx` — admin nav tabs (Applications | Access), header shows name · title, role rename
-- `src/components/QuickSwitch.tsx` — cycles through all 3 accounts
-- `src/app/page.tsx` — 3 login rows, "User" labeling, updated error/help copy
-- `src/components/ApplicationDetail.tsx` / `admin/AdminApplicationView.tsx` — "client portal" → "user portal" in comments
+- `src/lib/mock-data.ts` — Manila record replaced by Sydney Gateway (new ID, docs, timeline, coords); added a `hero` field to `Application` and mapped all three photos
+- `src/lib/applications.ts` — user2's seeded visibility → `AGV-2026-0161`; persist `version: 2` + `migrate` re-seed
+- `src/components/SitePhoto.tsx` — new; the photo treatment pipeline (real photography only)
+- `src/components/ApplicationGallery.tsx` — treated hero panel on each card, under the contour lines
+- `src/components/ApplicationDetail.tsx` — treated hero accent behind the header
+- `src/app/page.tsx` — login hero rendered unfiltered with legibility scrims; TopoField opacity reduced
+- `public/images/site/` — four hero assets committed (were untracked)
 
 ## Decisions made
-- Demo users reuse names already in the data (S. Whitfield leads Parramatta, R. Santiago leads Manila) — the assigned staff are the actual leads, which reads coherently
-- Auth on the user detail route is a client-side "Not available" state (not a redirect) — no flash, and it visibly demonstrates the guard working; the page still prerenders (generateStaticParams) with the check enforced at runtime
-- Users live in the applications store (domain data the admin edits), keyed by email to the session accounts (auth identity) — intentional split, joined on email
-- Access matrix uses no per-toggle toast (would be noisy across many checkboxes); the checkbox state + live "N of 3 visible" per row is the feedback. Instant-apply matches the Phase 5 no-save pattern
-- Admin nav is a slim second row under the header (tabs underline-style), admin-only; keeps the busy top bar uncluttered and scales on mobile
-- Header identity now shows name · title (all AGV staff) instead of name · org
+- Split the treatment exactly as briefed: verified by measurement, not assumption — I sampled each asset's luminance/saturation and rendered the pipeline offline to look at it before shipping. The login art is already palette-native (0.09 luminance); running it through the photo filter would have crushed it for nothing
+- Source photos are only ~420px wide, so they're used as **masked accent panels**, never full-bleed banners — at these render sizes there's no upscaling softness, and the heavy duotone reads as atmosphere rather than a stretched photo
+- The browser pane can't produce screenshots in this environment (its page reports `visibilityState: hidden`, so capture never gets a frame). Rather than ship the treatment unseen, I re-implemented the exact CSS pipeline (grayscale → contrast → brightness → W3C `mix-blend-color` SetLum → Void wash) offline with sharp and inspected the output images
+- Kept the "AU + PH" company framing on the login screen: AGV operates in both regions regardless of the current caseload, which is now all Sydney
 
 ## Known issues / TODO
 - Unused analytics/table components still retained in `src/components/admin/` (from the earlier gallery re-scope)
-- Turbopack AVIF logo build warning (cosmetic; runtime verified) — carried over
-- Reduced-motion pass in a real browser still pending — Phase 8 polish
+- Turbopack AVIF build warning (cosmetic; runtime verified correct) — carried over
+- Reduced-motion pass in a real browser still pending (the code paths exist and are wired to `prefers-reduced-motion`)
 
 ## Blocked on / needs a decision
 - none
 
 ## Next step
-- Phase 7: Supabase/realtime migration (separate track), then Phase 8 polish, Phase 9 Gemini imagery
+- Nothing outstanding — the demo is feature-complete. Optional future work: Supabase/realtime migration, the motion/a11y polish pass, and deleting the retained unused analytics components.

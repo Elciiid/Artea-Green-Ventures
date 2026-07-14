@@ -39,7 +39,7 @@ function seedUsers(): PortalUser[] {
       id: "user2@agv-demo.com",
       name: "R. Santiago",
       role: "user",
-      visibleApplicationIds: ["AGV-2026-0155"],
+      visibleApplicationIds: ["AGV-2026-0161"],
     },
   ];
 }
@@ -143,6 +143,14 @@ export const useApplications = create<ApplicationsState>()(
     }),
     {
       name: "agv-demo-applications",
+      // Bumped when the seed dataset itself changes (case IDs, applications).
+      // Older persisted demo state refers to records that no longer exist, so
+      // it's discarded rather than migrated.
+      version: 2,
+      migrate: () => ({
+        applications: seedApplications(),
+        users: seedUsers(),
+      }),
       partialize: (s) => ({ applications: s.applications, users: s.users }),
       onRehydrateStorage: () => (state) => state?._setHydrated(true),
     }

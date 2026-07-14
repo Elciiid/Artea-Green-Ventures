@@ -67,6 +67,8 @@ export type Application = {
   lead: string;
   /** the real-world organization AGV was engaged by (not a portal user) */
   clientName: string;
+  /** AGV site photography — rendered through the SitePhoto treatment */
+  hero: string;
   submitted: string; // ISO date
   documents: DocumentItem[];
   timeline: TimelineEntry[];
@@ -84,6 +86,7 @@ export const APPLICATIONS: Application[] = [
     stage: "under-review",
     lead: "S. Whitfield",
     clientName: "Transport for NSW",
+    hero: "/images/site/app-parramatta-hero.avif",
     submitted: "2026-06-18",
     documents: [
       { name: "EIS Addendum — Rev B.pdf", kind: "Assessment", size: "14.2 MB", status: "received", uploaded: "2026-07-02" },
@@ -111,6 +114,7 @@ export const APPLICATIONS: Application[] = [
     statusNote: "Approved",
     lead: "M. Okafor",
     clientName: "WHT Delivery Consortium",
+    hero: "/images/site/app-western-harbour-hero.avif",
     submitted: "2026-03-02",
     documents: [
       { name: "ESG Framework Mapping.pdf", kind: "Assessment", size: "8.6 MB", status: "received", uploaded: "2026-03-04" },
@@ -127,27 +131,28 @@ export const APPLICATIONS: Application[] = [
     ],
   },
   {
-    id: "AGV-2026-0155",
-    title: "Manila Social Housing Program",
-    service: "Flood Impact Assessment",
-    sector: "Social Infrastructure",
-    location: "Manila, PH",
-    country: "PH",
-    coords: "14.5995 / 120.9842",
+    id: "AGV-2026-0161",
+    title: "Sydney Gateway",
+    service: "Environmental Compliance Audit",
+    sector: "Transportation",
+    location: "Sydney, AU",
+    country: "AU",
+    coords: "-33.9268 / 151.1710",
     stage: "submitted",
     statusNote: "Pending documents",
     lead: "R. Santiago",
-    clientName: "National Housing Authority (PH)",
-    submitted: "2026-07-06",
+    clientName: "Transport for NSW",
+    hero: "/images/site/app-sydney-gateway-hero.avif",
+    submitted: "2026-07-08",
     documents: [
-      { name: "Flood Impact Assessment — ToR.pdf", kind: "Scope", size: "2.4 MB", status: "received", uploaded: "2026-07-06" },
-      { name: "Flood-plain Survey (2026).pdf", kind: "Survey", size: "—", status: "pending" },
-      { name: "Barangay Clearance.pdf", kind: "Legal", size: "—", status: "pending" },
+      { name: "Environmental Impact Statement — Rev A.pdf", kind: "Assessment", size: "18.4 MB", status: "received", uploaded: "2026-07-08" },
+      { name: "Air Quality & Noise Assessment.pdf", kind: "Assessment", size: "—", status: "pending" },
+      { name: "Contaminated Land Survey — St Peters.pdf", kind: "Survey", size: "—", status: "pending" },
     ],
     timeline: [
-      { at: "2026-07-06", actor: "System", kind: "system", text: "Application received via portal." },
-      { at: "2026-07-07", actor: "System", kind: "system", text: "Completeness check flagged 2 missing documents." },
-      { at: "2026-07-10", actor: "R. Santiago", kind: "comment", text: "Requested updated flood-plain survey and barangay clearance from the authority." },
+      { at: "2026-07-08", actor: "System", kind: "system", text: "Application received via portal." },
+      { at: "2026-07-09", actor: "System", kind: "system", text: "Completeness check flagged 2 missing documents." },
+      { at: "2026-07-13", actor: "R. Santiago", kind: "comment", text: "Requested air quality and noise assessment and the St Peters contaminated land survey from Transport for NSW." },
     ],
   },
 ];
