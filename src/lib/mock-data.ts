@@ -65,9 +65,8 @@ export type Application = {
   stage: Stage;
   statusNote?: string;
   lead: string;
+  /** the real-world organization AGV was engaged by (not a portal user) */
   clientName: string;
-  /** ties an application to the client demo login */
-  clientAccountEmail?: string;
   submitted: string; // ISO date
   documents: DocumentItem[];
   timeline: TimelineEntry[];
@@ -85,7 +84,6 @@ export const APPLICATIONS: Application[] = [
     stage: "under-review",
     lead: "S. Whitfield",
     clientName: "Transport for NSW",
-    clientAccountEmail: "client@agv-demo.com",
     submitted: "2026-06-18",
     documents: [
       { name: "EIS Addendum — Rev B.pdf", kind: "Assessment", size: "14.2 MB", status: "received", uploaded: "2026-07-02" },
@@ -153,7 +151,3 @@ export const APPLICATIONS: Application[] = [
     ],
   },
 ];
-
-export function applicationsForClient(email: string): Application[] {
-  return APPLICATIONS.filter((a) => a.clientAccountEmail === email);
-}

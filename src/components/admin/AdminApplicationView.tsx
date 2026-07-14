@@ -1,8 +1,8 @@
 "use client";
 
-// Admin detail view: the same ApplicationDetail the client portal uses,
-// with edit controls enabled. Reads live data from the applications store
-// so edits reflect here, in the gallery, and on the client portal.
+// Admin detail view: the same ApplicationDetail the user portal uses, with
+// edit controls enabled. Reads live data from the applications store so
+// edits reflect here, in the gallery, and on the user portal.
 
 import Link from "next/link";
 import ApplicationDetail from "@/components/ApplicationDetail";

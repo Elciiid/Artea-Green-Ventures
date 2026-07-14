@@ -4,7 +4,7 @@
 // and the mock role guard (redirects to login / the correct home).
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { roleHome, useSession, type Role } from "@/lib/session";
 import { useApplications } from "@/lib/applications";
@@ -27,6 +27,7 @@ export default function AppShell({
   const signOut = useSession((s) => s.signOut);
   const resetDemo = useApplications((s) => s.resetDemo);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -52,7 +53,7 @@ export default function AppShell({
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <span className="hidden font-mono text-[11px] text-ash lg:inline">
-              {account.name} · {account.org}
+              {account.name} · {account.title}
             </span>
             <span className="hidden rounded-full border border-ash/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone sm:inline-block">
               {account.role}
@@ -80,6 +81,13 @@ export default function AppShell({
             </button>
           </div>
         </div>
+
+        {account.role === "admin" && (
+          <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6">
+            <NavTab href="/admin" label="Applications" active={isApplicationsTab(pathname)} />
+            <NavTab href="/admin/access" label="Access" active={pathname.startsWith("/admin/access")} />
+          </nav>
+        )}
       </header>
 
       <main className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-24 pt-14">
@@ -93,5 +101,35 @@ export default function AppShell({
         </div>
       </footer>
     </div>
+  );
+}
+
+// The gallery tab is active for /admin and any /admin/applications/* route;
+// only /admin/access lights the Access tab.
+function isApplicationsTab(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/applications");
+}
+
+function NavTab({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`-mb-px border-b-2 py-3 font-mono text-[10px] uppercase tracking-[0.16em] transition ${
+        active
+          ? "border-signal text-signal"
+          : "border-transparent text-ash hover:text-bone"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

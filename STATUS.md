@@ -1,42 +1,54 @@
 # AGV Portal — Status
-Updated: 2026-07-14 14:23
-Phase: Phase 5 — Shared Detail Page + Admin Edit Controls (renumbered: polish is Phase 6, Gemini imagery Phase 7)
+Updated: 2026-07-14 21:47
+Phase: Phase 6 — Multi-User Access, Visibility & "Client" → "User" Rename
 State: complete
 
 ## Done this session
-- Replaced the `/admin/applications/[id]` stub entirely: it now renders the same `ApplicationDetail` the client portal uses, with `canEdit` — via a new `AdminApplicationView` client component (back link + unknown-ID fallback preserved)
-- Made application data reactive: new `src/lib/applications.ts` Zustand store (same persist pattern as the session store, key `agv-demo-applications`), seeded from the static mock data via `structuredClone`. The admin gallery, admin detail, and client portal all read from it, so edits propagate everywhere instantly
-- Status change control: when `canEdit`, an "Update status" select (all 5 stages, any direction — demo correction path, no forward-only enforcement) sits in the stepper card header. Changing it updates the store immediately, confirms via the existing toast, appends a self-logging "Status moved to X." timeline entry (attributed + dated), and clears the stale `statusNote`
-- Add-note control: when `canEdit`, a form below the activity timeline ("Add note — logs as A. Mercer") appends a comment entry timestamped today, in the timeline's existing chronological order and style; submit disabled while empty; toast on success
-- Notes/status entries attribute to the signed-in admin's name from the session store (falls back to "A. Mercer")
-- Client stays read-only: `/portal` renders `ApplicationDetail` without `canEdit` through a new `ClientPortalView` (store-backed) — verified no select, no note form
-- Nice-to-have shipped: "Reset demo data" text button in the header (admin-only, hidden below md so the mobile header keeps fitting) restores the seed — verified it reverts stages, restores original statusNotes, and truncates added timeline entries
-- Verified end-to-end: full edit loop (status change → toast/chip/stepper/timeline/store), note flow, gallery chip reflects edits after full reload (persistence), **zero hydration errors reloading with persisted edits**, admin edit visible on the client's `/portal` via quick-switch, reset restores seed across views, unknown-ID fallback intact, no overflow at 375px with the new controls, console/server clean, build clean
+- Terminology fix: the portal role is now `user`, not `client`, everywhere it refers to who's using the app
+  - `Role` type `'admin' | 'client'` → `'admin' | 'user'`; `switchRole` → `switchAccount`; `ClientPortalView` → `UserPortalView`; `expect="client"` → `expect="user"`
+  - UI copy updated: role chip (USER), login rows, quick-switch — all read "User"
+  - Left untouched: the application `clientName` field and its "Client:" meta label (the real-world engaging organization — different concept)
+  - Dropped the "Transport for NSW contact" framing; demo users are AGV staff granted access to engagements
+- Three demo accounts (was two): admin (A. Mercer), user1 (S. Whitfield), user2 (R. Santiago) — login rows + quick-switch (now cycles all 3) reflect them
+- Data model: extended the reactive store with a `users` collection (id/email, name, role, `visibleApplicationIds`) + a `toggleVisibility(userId, appId)` action; seeded with user1 → Parramatta + Western Harbour, user2 → Manila. Added pure helpers `visibleApplicationsFor` / `isApplicationVisible`. `resetDemo` and persistence now cover users too
+- Generalized the gallery: extracted `ApplicationGallery` (eyebrow/title/subtitle/applications/hrefBase/emptyState props) from the admin dashboard; both `/admin` and `/portal` now reuse it — no duplicated card markup
+- `/portal` renders `UserPortalView` — a gallery of only the signed-in user's visible applications, with a plain empty state for zero-visibility (not hit by either demo account today)
+- `/portal/applications/[id]` (new) renders the shared `ApplicationDetail` read-only via `UserApplicationView`, with an authorization check — a user hitting an application outside their visible list gets a "Not available" state instead of the content
+- `/admin/access` (new): a users × applications checkbox matrix, instant-apply toggles (no save step), Signal on the checked/active cell, live "N of 3 visible" per row. Added an admin nav strip (Applications | Access tabs, active-state via pathname) between the two views in the shell
+- Admin still sees all 3 applications regardless of visibility settings
+- Verified end-to-end in the browser (details below); build clean, zero console errors
 
 ## Files added/changed
-- `src/lib/applications.ts` — new; reactive persisted applications store (setStage / addNote / resetDemo, hydration flag)
-- `src/components/ApplicationDetail.tsx` — `canEdit` now renders the status select + add-note form; wires store actions + session actor; toast copy for both
-- `src/components/admin/AdminApplicationView.tsx` — new; admin detail wrapper (store lookup by ID, canEdit)
-- `src/app/admin/applications/[id]/page.tsx` — stub removed; thin server page (params/metadata/staticParams) rendering AdminApplicationView in the shell
-- `src/components/ClientPortalView.tsx` — new; client portal content backed by the store, read-only
-- `src/app/portal/page.tsx` — thin server page rendering ClientPortalView
-- `src/components/admin/AdminDashboard.tsx` — gallery reads the store instead of static mock data
-- `src/components/AppShell.tsx` — admin-only "Reset demo data" header button
+- `src/lib/session.ts` — Role rename; `DEMO_ACCOUNTS` now a 3-entry array of AGV staff (id/role/email/name/title); `accountByEmail`, `nextAccount`, `switchAccount` (cycles)
+- `src/lib/applications.ts` — `users` collection + `PortalUser` type, `toggleVisibility`, `visibleApplicationsFor`/`isApplicationVisible`, users in resetDemo + persistence
+- `src/lib/mock-data.ts` — removed the obsolete `clientAccountEmail` field + `applicationsForClient` helper (kept `clientName`)
+- `src/components/ApplicationGallery.tsx` — new; the shared gallery
+- `src/components/admin/AdminDashboard.tsx` — thin wrapper over ApplicationGallery (all apps)
+- `src/components/UserPortalView.tsx` — new; portal gallery of visible apps (replaces ClientPortalView, now deleted)
+- `src/components/UserApplicationView.tsx` — new; read-only detail with visibility auth check
+- `src/app/portal/page.tsx` — renders UserPortalView
+- `src/app/portal/applications/[id]/page.tsx` — new; user detail route
+- `src/components/admin/AccessMatrix.tsx` + `src/app/admin/access/page.tsx` — new; visibility matrix + route
+- `src/components/AppShell.tsx` — admin nav tabs (Applications | Access), header shows name · title, role rename
+- `src/components/QuickSwitch.tsx` — cycles through all 3 accounts
+- `src/app/page.tsx` — 3 login rows, "User" labeling, updated error/help copy
+- `src/components/ApplicationDetail.tsx` / `admin/AdminApplicationView.tsx` — "client portal" → "user portal" in comments
 
 ## Decisions made
-- Status changes self-log into the activity timeline (matches the seed data's own "Status moved to Under Review" entries) and clear `statusNote`, since the note described the previous state — reset restores the original notes
-- Store timestamps are date-only ISO (matches the timeline's existing date-level formatting)
-- `mock-data.ts` stays the pure seed (types + data); the store owns runtime state — `generateStaticParams`/`generateMetadata` still read the seed since IDs never change
-- Followed the session store's exact persist pattern rather than `skipHydration` — verified empirically: reloading with persisted edits diverging from the SSR seed produces no hydration errors (rehydration lands after first render)
-- Reset button hidden below md: the mobile header is already at capacity, and resets during demos happen on the presenting machine
+- Demo users reuse names already in the data (S. Whitfield leads Parramatta, R. Santiago leads Manila) — the assigned staff are the actual leads, which reads coherently
+- Auth on the user detail route is a client-side "Not available" state (not a redirect) — no flash, and it visibly demonstrates the guard working; the page still prerenders (generateStaticParams) with the check enforced at runtime
+- Users live in the applications store (domain data the admin edits), keyed by email to the session accounts (auth identity) — intentional split, joined on email
+- Access matrix uses no per-toggle toast (would be noisy across many checkboxes); the checkbox state + live "N of 3 visible" per row is the feedback. Instant-apply matches the Phase 5 no-save pattern
+- Admin nav is a slim second row under the header (tabs underline-style), admin-only; keeps the busy top bar uncluttered and scales on mobile
+- Header identity now shows name · title (all AGV staff) instead of name · org
 
 ## Known issues / TODO
-- Unused analytics/table components still retained in `src/components/admin/` (per the Phase 4 re-scope; delete in cleanup if "Insights" never lands)
-- Turbopack AVIF build warning (cosmetic; runtime verified) — carried over
-- Reduced-motion pass in a real browser still pending — now Phase 6 polish
+- Unused analytics/table components still retained in `src/components/admin/` (from the earlier gallery re-scope)
+- Turbopack AVIF logo build warning (cosmetic; runtime verified) — carried over
+- Reduced-motion pass in a real browser still pending — Phase 8 polish
 
 ## Blocked on / needs a decision
 - none
 
 ## Next step
-- Phase 6: polish pass — motion, empty/loading states, responsiveness, accessibility (reduced motion, visible focus states) (on your prompt)
+- Phase 7: Supabase/realtime migration (separate track), then Phase 8 polish, Phase 9 Gemini imagery

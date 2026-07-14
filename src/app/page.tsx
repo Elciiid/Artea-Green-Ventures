@@ -8,12 +8,7 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import TopoField from "@/components/TopoField";
 import { Wordmark } from "@/components/Logo";
-import {
-  DEMO_ACCOUNTS,
-  roleHome,
-  useSession,
-  type DemoAccount,
-} from "@/lib/session";
+import { roleHome, useSession } from "@/lib/session";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -27,16 +22,21 @@ const rise = {
   show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
 };
 
-const QUICK_ACCESS: { account: DemoAccount; label: string; hint: string }[] = [
+const QUICK_ACCESS: { email: string; label: string; hint: string }[] = [
   {
-    account: DEMO_ACCOUNTS.admin,
-    label: "Admin console",
-    hint: "All applications · status controls · analytics",
+    email: "admin@agv-demo.com",
+    label: "Admin",
+    hint: "All applications · edit controls · manage user access",
   },
   {
-    account: DEMO_ACCOUNTS.client,
-    label: "Client portal",
-    hint: "Transport for NSW · one active application",
+    email: "user1@agv-demo.com",
+    label: "User · S. Whitfield",
+    hint: "Two assigned engagements",
+  },
+  {
+    email: "user2@agv-demo.com",
+    label: "User · R. Santiago",
+    hint: "One assigned engagement",
   },
 ];
 
@@ -56,8 +56,8 @@ export default function LoginPage() {
     if (hydrated && account) router.replace(roleHome(account.role));
   }, [hydrated, account, router]);
 
-  function enterAs(target: DemoAccount) {
-    const acc = signIn(target.email);
+  function enterAs(targetEmail: string) {
+    const acc = signIn(targetEmail);
     if (acc) router.push(roleHome(acc.role));
   }
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
       router.push(roleHome(acc.role));
     } else {
       setError(
-        "No matching demo account. Use admin@agv-demo.com or client@agv-demo.com."
+        "No matching demo account. Use admin@, user1@ or user2@agv-demo.com."
       );
     }
   }
@@ -139,18 +139,18 @@ export default function LoginPage() {
             Access / Sign in
           </p>
           <p className="mt-3 text-xs leading-relaxed text-ash">
-            Demo mode — enter either address, any password.
+            Demo mode — enter any demo address, any password.
           </p>
 
           <div className="mt-6 space-y-2.5">
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ash/70">
               One-click demo access
             </p>
-            {QUICK_ACCESS.map(({ account: acc, label, hint }) => (
+            {QUICK_ACCESS.map(({ email: accEmail, label, hint }) => (
               <button
-                key={acc.role}
+                key={accEmail}
                 type="button"
-                onClick={() => enterAs(acc)}
+                onClick={() => enterAs(accEmail)}
                 className="group flex w-full items-center justify-between gap-3 rounded-lg border border-ash/15 bg-void/40 px-4 py-3 text-left transition hover:border-signal/50 hover:bg-void/70"
               >
                 <span>
@@ -158,7 +158,7 @@ export default function LoginPage() {
                     {label}
                   </span>
                   <span className="mt-0.5 block font-mono text-[10px] text-ash">
-                    {acc.email}
+                    {accEmail}
                   </span>
                   <span className="mt-1 block text-[11px] text-ash/70">
                     {hint}

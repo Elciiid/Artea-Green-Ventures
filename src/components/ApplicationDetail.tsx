@@ -1,8 +1,8 @@
 "use client";
 
-// Full single-application view, shared by the client portal (read-only)
-// and the admin detail route (`canEdit` adds a status select and an
-// add-note form that write to the reactive applications store).
+// Full single-application view, shared by the user portal (read-only) and
+// the admin detail route (`canEdit` adds a status select and an add-note
+// form that write to the reactive applications store).
 //
 // Note on color logic: the stepper uses POSITION-relative colors (done =
 // Contour, current = Amber pulsing, upcoming = dim Ash) — deliberately
