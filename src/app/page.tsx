@@ -82,8 +82,12 @@ export default function LoginPage() {
             contours), so it runs unfiltered — no photo treatment. The
             gradients below are for text legibility only. */}
         <div aria-hidden className="absolute inset-0">
+          {/* .jpg, not .jfif: static hosts serve an unknown .jfif extension as
+              application/octet-stream, and Next's production image optimizer
+              rejects any upstream that isn't a real image content-type — the
+              dev server is lenient, so it only broke once deployed. */}
           <Image
-            src="/images/site/login-hero.jfif"
+            src="/images/site/login-hero.jpg"
             alt=""
             fill
             priority
