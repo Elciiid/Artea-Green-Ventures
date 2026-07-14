@@ -100,9 +100,8 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-void/70 via-transparent to-transparent" />
         </div>
 
-        {/* the SVG motif still drives the pointer parallax, kept quiet so it
-            reads with the art rather than competing with it */}
-        <TopoField parallax draw className="opacity-20" />
+        {/* No SVG contour motif here — the hero art already *is* the contour
+            motif, so the lines live on the sign-in panel instead. */}
 
         <motion.div
           variants={stagger}
@@ -147,7 +146,20 @@ export default function LoginPage() {
       </section>
 
       {/* ——— instrument panel ——— */}
-      <section className="relative flex items-center justify-center border-t border-ash/10 bg-pine/30 p-6 py-14 sm:p-10 lg:border-l lg:border-t-0">
+      <section className="relative flex items-center justify-center overflow-hidden border-t border-ash/10 bg-pine/30 p-6 py-14 sm:p-10 lg:border-l lg:border-t-0">
+        {/* the contour motif lives here now: concentric survey rings behind
+            the sign-in card, drifting with the pointer */}
+        <TopoField
+          parallax
+          draw
+          seed={19}
+          peaks={[
+            { cx: 720, cy: 430, r0: 95, rings: 9, gap: 58 },
+            { cx: 250, cy: 840, r0: 40, rings: 4, gap: 34 },
+          ]}
+          className="opacity-55 [mask-image:radial-gradient(120%_95%_at_50%_45%,black_35%,transparent_100%)]"
+        />
+
         <motion.div
           initial={reduced ? false : { opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
