@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { roleHome, useSession, type Role } from "@/lib/session";
+import { useApplications } from "@/lib/applications";
 import { Wordmark } from "@/components/Logo";
 import QuickSwitch from "@/components/QuickSwitch";
 import TopoField from "@/components/TopoField";
@@ -24,6 +25,7 @@ export default function AppShell({
   const account = useSession((s) => s.account);
   const hydrated = useSession((s) => s.hydrated);
   const signOut = useSession((s) => s.signOut);
+  const resetDemo = useApplications((s) => s.resetDemo);
   const router = useRouter();
 
   useEffect(() => {
@@ -56,6 +58,16 @@ export default function AppShell({
               {account.role}
             </span>
             <QuickSwitch />
+            {account.role === "admin" && (
+              <button
+                type="button"
+                onClick={resetDemo}
+                title="Restore applications to their original seed data"
+                className="hidden font-mono text-[10px] uppercase tracking-[0.14em] text-ash transition hover:text-amber md:inline"
+              >
+                Reset demo data
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {

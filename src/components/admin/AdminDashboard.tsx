@@ -12,8 +12,8 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import StatusChip from "@/components/StatusChip";
 import TopoField from "@/components/TopoField";
+import { useApplications } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
-import { APPLICATIONS } from "@/lib/mock-data";
 
 const MotionLink = motion.create(Link);
 
@@ -21,6 +21,7 @@ const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function AdminDashboard() {
   const reduced = useReducedMotion();
+  const applications = useApplications((s) => s.applications);
 
   const enter = (i: number) =>
     reduced
@@ -41,13 +42,13 @@ export default function AdminDashboard() {
           Applications
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-ash">
-          {APPLICATIONS.length} active engagements across AU and PH — open one
+          {applications.length} active engagements across AU and PH — open one
           to review its status, documents and activity.
         </p>
       </motion.div>
 
       <div className="mt-10 space-y-4">
-        {APPLICATIONS.map((app, i) => (
+        {applications.map((app, i) => (
           <MotionLink
             key={app.id}
             href={`/admin/applications/${app.id}`}

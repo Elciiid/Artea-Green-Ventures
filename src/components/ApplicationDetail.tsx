@@ -1,30 +1,32 @@
 "use client";
 
-// Full single-application view, shared by the client portal (Phase 3) and —
-// in Phase 4 — the admin detail route, which will layer edit controls on top
-// via `canEdit`. Nothing here is role-specific: it renders whatever
-// application it's given, read-only by default.
+// Full single-application view, shared by the client portal (read-only)
+// and the admin detail route (`canEdit` adds a status select and an
+// add-note form that write to the reactive applications store).
 //
 // Note on color logic: the stepper uses POSITION-relative colors (done =
 // Contour, current = Amber pulsing, upcoming = dim Ash) — deliberately
 // distinct from the StatusChip's 3-tier semantics.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import StatusChip from "@/components/StatusChip";
+import { useApplications } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
+import { useSession } from "@/lib/session";
 import {
   PIPELINE,
   stageIndex,
   type Application,
   type DocumentItem,
+  type Stage,
 } from "@/lib/mock-data";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 type Props = {
   app: Application;
-  /** Phase 4: admins get status/note controls layered on top. Read-only for now. */
+  /** admins get an "Update status" select and an add-note form */
   canEdit?: boolean;
 };
 
@@ -52,9 +54,27 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
           transition: { duration: 0.6, delay: i * 0.09, ease: EASE },
         };
 
-  // canEdit is accepted now so Phase 4 can slot controls in without an API
-  // change; no edit UI exists yet by design.
-  void canEdit;
+  const setStage = useApplications((s) => s.setStage);
+  const addNote = useApplications((s) => s.addNote);
+  const account = useSession((s) => s.account);
+  const actor = account?.name ?? "A. Mercer";
+  const [note, setNote] = useState("");
+
+  function onStageChange(e: ChangeEvent<HTMLSelectElement>) {
+    const stage = e.target.value as Stage;
+    setStage(app.id, stage, actor);
+    const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
+    showToast(`Status updated to ${label}.`);
+  }
+
+  function onNoteSubmit(e: FormEvent) {
+    e.preventDefault();
+    const text = note.trim();
+    if (!text) return;
+    addNote(app.id, text, actor);
+    setNote("");
+    showToast("Note added to the activity log.");
+  }
 
   return (
     <div>
@@ -85,13 +105,33 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
         aria-label="Pipeline position"
         className="mt-10 rounded-xl border border-ash/15 bg-pine p-6 sm:p-8"
       >
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-ash">
             Pipeline position
           </h2>
-          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-ash/60">
-            Stage {current + 1} of {PIPELINE.length}
-          </span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-ash/60">
+              Stage {current + 1} of {PIPELINE.length}
+            </span>
+            {canEdit && (
+              <label className="flex items-center gap-2">
+                <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-ash">
+                  Update status
+                </span>
+                <select
+                  value={app.stage}
+                  onChange={onStageChange}
+                  className="rounded-md border border-ash/25 bg-void/70 px-2.5 py-1.5 font-mono text-[11px] text-bone outline-none transition focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
+                >
+                  {PIPELINE.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
         </div>
 
         <div className="relative mt-9">
@@ -224,6 +264,33 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
               </li>
             ))}
           </ol>
+
+          {canEdit && (
+            <form onSubmit={onNoteSubmit} className="mt-6 border-t border-ash/10 pt-5">
+              <label
+                htmlFor="add-note"
+                className="font-mono text-[9px] uppercase tracking-[0.18em] text-ash"
+              >
+                Add note — logs as {actor}
+              </label>
+              <div className="mt-2 flex gap-2">
+                <input
+                  id="add-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Internal note for the activity log"
+                  className="min-w-0 flex-1 rounded-md border border-ash/20 bg-void/70 px-3 py-2 text-xs text-bone outline-none transition placeholder:text-ash/40 focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
+                />
+                <button
+                  type="submit"
+                  disabled={!note.trim()}
+                  className="shrink-0 rounded-md bg-signal px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Add
+                </button>
+              </div>
+            </form>
+          )}
         </motion.section>
       </div>
 
