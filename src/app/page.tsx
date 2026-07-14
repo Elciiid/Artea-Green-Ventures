@@ -124,13 +124,14 @@ export default function LoginPage() {
               Environmental compliance · AU + PH
             </p>
             <h1 className="mt-5 font-display text-[clamp(3.4rem,8vw,7rem)] font-black leading-[0.92] tracking-[-0.035em] text-bone">
-              Compliance,
+              Raising the
               <br />
-              <span className="text-signal">mapped.</span>
+              <span className="text-signal">standard.</span>
             </h1>
-            <p className="mt-6 max-w-md text-sm leading-relaxed text-ash sm:text-base">
-              Every environmental approval tracked from submission to
-              sign-off — every site, every stage, one source of truth.
+            <p className="mt-6 max-w-lg text-sm leading-relaxed text-ash sm:text-base">
+              An independent, purpose-driven firm advancing quality, safety and
+              environmental standards — creating lasting value for communities
+              across Australia and the Philippines.
             </p>
           </motion.div>
 
