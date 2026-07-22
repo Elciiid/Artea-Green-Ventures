@@ -36,8 +36,9 @@ const admin = createClient(url, serviceRole, {
 
 const ACCOUNTS = [
   { email: "admin@agv-demo.com", name: "A. Mercer", role: "admin" },
-  { email: "user1@agv-demo.com", name: "S. Whitfield", role: "user" },
-  { email: "user2@agv-demo.com", name: "R. Santiago", role: "user" },
+  { email: "user1@agv-demo.com", name: "S. Whitfield", role: "staff" },
+  { email: "user2@agv-demo.com", name: "R. Santiago", role: "staff" },
+  { email: "client1@agv-demo.com", name: "N. Reyes", role: "client" },
 ];
 
 async function findByEmail(email) {

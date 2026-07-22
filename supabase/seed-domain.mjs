@@ -71,7 +71,7 @@ const APPS = [
       { name: "Site Access Deed.pdf", kind: "Legal", size_label: "1.1 MB", status: "received", uploaded: "2026-06-18" },
     ],
     timeline: [
-      { at: "2026-06-18", actor: "System", kind: "system", body: "We received this application through the portal." },
+      { at: "2026-06-18", actor: "System", kind: "system", body: "We received this application through the portal.", visibleToClient: true },
       { at: "2026-06-19", actor: "A. Mercer", kind: "status", body: "Status moved to Under Review." },
       { at: "2026-06-24", actor: "S. Whitfield", kind: "comment", body: "We asked the delivery contractor for baseline noise and vibration data." },
       { at: "2026-07-02", actor: "T. Alvarez", kind: "document", body: "Uploaded the EIS Addendum (Rev B)." },
@@ -137,6 +137,7 @@ const APPS = [
 const GRANTS = [
   { email: "user1@agv-demo.com", references: ["AGV-2026-0142", "AGV-2026-0118"] },
   { email: "user2@agv-demo.com", references: ["AGV-2026-0161"] },
+  { email: "client1@agv-demo.com", references: ["AGV-2026-0142"] },
 ];
 
 async function must(label, promise) {
@@ -189,6 +190,7 @@ async function main() {
       actor: t.actor,
       kind: t.kind,
       body: t.body,
+      visible_to_client: t.visibleToClient ?? false,
     }));
     await must(`activity ${app.reference}`, db.from("agv_activity_entries").upsert(actRows, { onConflict: "id" }));
 
