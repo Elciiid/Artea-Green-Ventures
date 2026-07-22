@@ -6,7 +6,10 @@
 import { create } from "zustand";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
-export type Role = "admin" | "user";
+export type Role = "admin" | "staff" | "client";
+
+/** The two non-admin roles, which share every /portal surface. */
+export const PORTAL_ROLES: Role[] = ["staff", "client"];
 
 /** The signed-in person, assembled from the auth user + their agv_profiles row. */
 export type Account = {
@@ -49,8 +52,9 @@ export function showDevTools(): boolean {
 // Used only by the dev quick-switcher and the login screen's one-click rows.
 export const DEV_ACCOUNTS: { email: string; name: string; role: Role }[] = [
   { email: "admin@agv-demo.com", name: "A. Mercer", role: "admin" },
-  { email: "user1@agv-demo.com", name: "S. Whitfield", role: "user" },
-  { email: "user2@agv-demo.com", name: "R. Santiago", role: "user" },
+  { email: "user1@agv-demo.com", name: "S. Whitfield", role: "staff" },
+  { email: "user2@agv-demo.com", name: "R. Santiago", role: "staff" },
+  { email: "client1@agv-demo.com", name: "N. Reyes", role: "client" },
 ];
 
 export function nextAccount(current: { email: string }): { email: string; name: string; role: Role } {
@@ -105,7 +109,7 @@ async function loadAccount(): Promise<Account | null> {
     id: user.id,
     email: user.email ?? "",
     name: profile?.name ?? (meta.name as string) ?? user.email ?? "",
-    role: profile?.role ?? ((meta.role as Role) ?? "user"),
+    role: profile?.role ?? ((meta.role as Role) ?? "staff"),
     organizationId: profile?.organization_id ?? "",
   };
 }

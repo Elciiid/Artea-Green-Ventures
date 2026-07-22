@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
 import UserApplicationView from "@/components/UserApplicationView";
+import { PORTAL_ROLES } from "@/lib/session";
 
 export async function generateMetadata({
   params,
@@ -28,7 +29,7 @@ export default async function PortalApplicationPage({
 }) {
   const { id } = await params;
   return (
-    <AppShell expect="user">
+    <AppShell expect={PORTAL_ROLES}>
       <UserApplicationView id={id} />
     </AppShell>
   );

@@ -62,7 +62,7 @@ export default function AppShell({
   expect,
   children,
 }: {
-  expect?: Role;
+  expect?: Role | Role[];
   children: React.ReactNode;
 }) {
   const account = useSession((s) => s.account);
@@ -72,6 +72,7 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const allowedRoles = expect === undefined ? null : Array.isArray(expect) ? expect : [expect];
 
   useEffect(() => {
     if (!hydrated) return;
@@ -79,8 +80,8 @@ export default function AppShell({
       router.replace("/");
       return;
     }
-    if (expect && account.role !== expect) router.replace(roleHome(account.role));
-  }, [hydrated, account, expect, router]);
+    if (allowedRoles && !allowedRoles.includes(account.role)) router.replace(roleHome(account.role));
+  }, [hydrated, account, allowedRoles, router]);
 
   // Close the mobile drawer whenever the route changes.
   useEffect(() => {
@@ -98,7 +99,7 @@ export default function AppShell({
   }, [menuOpen]);
 
   // Shown while the persisted session restores or a redirect is pending.
-  if (!hydrated || !account || (expect && account.role !== expect)) {
+  if (!hydrated || !account || (allowedRoles && !allowedRoles.includes(account.role))) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-void px-6">
         <p

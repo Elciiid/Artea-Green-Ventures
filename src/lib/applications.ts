@@ -32,13 +32,13 @@ function seedUsers(): PortalUser[] {
     {
       id: "user1@agv-demo.com",
       name: "S. Whitfield",
-      role: "user",
+      role: "staff",
       visibleApplicationIds: ["AGV-2026-0142", "AGV-2026-0118"],
     },
     {
       id: "user2@agv-demo.com",
       name: "R. Santiago",
-      role: "user",
+      role: "staff",
       visibleApplicationIds: ["AGV-2026-0161"],
     },
   ];

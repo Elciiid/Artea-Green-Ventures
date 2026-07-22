@@ -17,7 +17,7 @@ export default function AccessMatrix() {
   const users = useApplications((s) => s.users);
   const toggleVisibility = useApplications((s) => s.toggleVisibility);
 
-  const normalUsers = users.filter((u) => u.role === "user");
+  const normalUsers = users.filter((u) => u.role === "staff");
 
   const enter = reduced
     ? {}
