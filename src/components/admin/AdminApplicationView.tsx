@@ -17,6 +17,7 @@ import {
   changeApplicationStage,
   fetchApplicationByReference,
 } from "@/lib/supabase/applications";
+import { uploadDocument } from "@/lib/supabase/documents";
 import { useSession } from "@/lib/session";
 import type { Application, Stage } from "@/lib/mock-data";
 
@@ -70,6 +71,12 @@ export default function AdminApplicationView({ id }: { id: string }) {
     if (app) setState({ status: "ready", app });
   }
 
+  async function handleUploadDocument(documentId: string, file: File, actor: string) {
+    await uploadDocument(clean, documentId, file, actor);
+    const app = await fetchApplicationByReference(clean);
+    if (app) setState({ status: "ready", app });
+  }
+
   return (
     <>
       <Link
@@ -86,6 +93,7 @@ export default function AdminApplicationView({ id }: { id: string }) {
             canEdit
             onStageChange={handleStageChange}
             onAddNote={handleAddNote}
+            onUploadDocument={handleUploadDocument}
           />
         </div>
       ) : state.status === "loading" ? (

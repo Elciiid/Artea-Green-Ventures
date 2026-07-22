@@ -28,11 +28,13 @@ type ApplicationRow = {
 };
 
 type DocumentRow = {
+  id: string;
   name: string;
   kind: string;
   size_label: string | null;
   status: string;
   uploaded_at: string | null;
+  storage_path: string | null;
 };
 
 type ActivityRow = {
@@ -55,11 +57,13 @@ function escapeLike(value: string): string {
 
 function toDocument(row: DocumentRow): DocumentItem {
   return {
+    id: row.id,
     name: row.name,
     kind: row.kind,
     size: row.size_label ?? "—",
     status: row.status as DocumentItem["status"],
     uploaded: row.uploaded_at ? row.uploaded_at.slice(0, 10) : undefined,
+    storagePath: row.storage_path ?? undefined,
   };
 }
 
@@ -136,7 +140,7 @@ export async function fetchApplicationByReference(
   const [docsResult, activityResult] = await Promise.all([
     supabase
       .from("agv_documents")
-      .select("name, kind, size_label, status, uploaded_at")
+      .select("id, name, kind, size_label, status, uploaded_at, storage_path")
       .eq("application_id", application.id)
       .order("created_at", { ascending: true }),
     supabase
@@ -162,7 +166,7 @@ export async function fetchApplicationByReference(
  * never threaded through. RLS still gates this the same as any other read:
  * an application this account can't see resolves to null here too.
  */
-async function findApplicationId(reference: string): Promise<string | null> {
+export async function findApplicationId(reference: string): Promise<string | null> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("agv_applications")

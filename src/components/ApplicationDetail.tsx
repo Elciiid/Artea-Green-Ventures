@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useReducedMotionPref } from "@/lib/preferences";
 import StatusChip from "@/components/StatusChip";
 import TopoPlate from "@/components/TopoPlate";
+import { getDocumentDownloadUrl } from "@/lib/supabase/documents";
 import { formatDate } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import {
@@ -37,6 +38,8 @@ type Props = {
   onStageChange?: (stage: Stage, actor: string) => Promise<void>;
   /** called with the note text + the acting user's name; the caller owns persistence. A rejected promise shows an error toast instead of the success one. */
   onAddNote?: (text: string, actor: string) => Promise<void>;
+  /** called with a pending document's id, the chosen file, and the acting user's name; the caller owns persistence. Omit to hide the upload control even when canEdit is true (e.g. a read-only caller that still wants the status/note controls off). */
+  onUploadDocument?: (documentId: string, file: File, actor: string) => Promise<void>;
 };
 
 export default function ApplicationDetail({
@@ -44,6 +47,7 @@ export default function ApplicationDetail({
   canEdit = false,
   onStageChange: onStageChangeProp,
   onAddNote: onAddNoteProp,
+  onUploadDocument: onUploadDocumentProp,
 }: Props) {
   const reduced = useReducedMotionPref();
   const current = stageIndex(app.stage);
@@ -93,6 +97,34 @@ export default function ApplicationDetail({
       showToast("Note saved.");
     } catch (err) {
       showToast(err instanceof Error ? `Couldn't save: ${err.message}` : "Couldn't save the note.");
+    }
+  }
+
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+
+  async function handleView(doc: DocumentItem) {
+    if (!doc.storagePath) {
+      showToast("No file on record for this document yet.");
+      return;
+    }
+    try {
+      const url = await getDocumentDownloadUrl(doc.storagePath);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      showToast(err instanceof Error ? `Couldn't open the file: ${err.message}` : "Couldn't open the file.");
+    }
+  }
+
+  async function handleFileSelected(doc: DocumentItem, file: File) {
+    if (!doc.id || !onUploadDocumentProp) return;
+    setUploadingDocId(doc.id);
+    try {
+      await onUploadDocumentProp(doc.id, file, actor);
+      showToast(`${doc.name} uploaded.`);
+    } catch (err) {
+      showToast(err instanceof Error ? `Couldn't upload: ${err.message}` : "Couldn't upload the file.");
+    } finally {
+      setUploadingDocId(null);
     }
   }
 
@@ -254,7 +286,7 @@ export default function ApplicationDetail({
 
         <ul className="mt-4 divide-y divide-ash/15 border-t border-ash/15">
           {app.documents.map((doc) => (
-            <li key={doc.name} className="flex items-center gap-4 py-3.5">
+            <li key={doc.id ?? doc.name} className="flex items-center gap-4 py-3.5">
               <FileBadge name={doc.name} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-bone">{doc.name}</p>
@@ -266,11 +298,25 @@ export default function ApplicationDetail({
               {doc.status === "received" ? (
                 <button
                   type="button"
-                  onClick={() => showToast("You can't open documents in this demo.")}
+                  onClick={() => handleView(doc)}
                   className="shrink-0 text-sm font-medium text-signal underline decoration-ash/40 decoration-1 underline-offset-4 transition hover:decoration-signal"
                 >
                   View
                 </button>
+              ) : canEdit && onUploadDocumentProp && doc.id ? (
+                <label className="shrink-0 cursor-pointer text-sm font-medium text-signal underline decoration-ash/40 decoration-1 underline-offset-4 transition hover:decoration-signal aria-disabled:cursor-not-allowed aria-disabled:text-ash aria-disabled:no-underline">
+                  <input
+                    type="file"
+                    className="sr-only"
+                    disabled={uploadingDocId === doc.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) handleFileSelected(doc, file);
+                    }}
+                  />
+                  {uploadingDocId === doc.id ? "Uploading…" : "Upload"}
+                </label>
               ) : (
                 <span className="shrink-0 rounded-full border border-amber/50 px-2.5 py-0.5 text-label uppercase tracking-[0.12em] text-amber">
                   Not received
