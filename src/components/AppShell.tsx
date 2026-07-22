@@ -1,25 +1,68 @@
 "use client";
 
-// Shared shell for /admin and /portal: header, footer, faint terrain band,
-// and the mock role guard (redirects to login / the correct home).
+// Shared shell for every signed-in surface (/admin, /portal, /account).
+//
+// Phase 10c moved navigation from a crowded header into a left SIDEBAR. The
+// header was already carrying the masthead, a role chip, DisplaySettings, the
+// dev switcher, sign-out, and a second row of admin tabs — and this phase adds
+// Account settings with an audit trail (Phase 13) due right after. A sidebar
+// absorbs new destinations by growing vertically (cheap) instead of packing a
+// single header row horizontally (crowded), and separates three things that
+// were tangled together: section navigation (sidebar), page-agnostic display
+// chrome (DisplaySettings — stays a top-bar popover because it must also work
+// pre-login), and identity/session actions (sidebar footer).
+//
+// `expect` is optional: pass a role to guard a role-specific surface, omit it
+// for shared surfaces like /account that any signed-in person may reach.
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { roleHome, useSession, type Role } from "@/lib/session";
+import { useEffect, useState } from "react";
+import { roleHome, showDevTools, useSession, type Role } from "@/lib/session";
 import { useApplications } from "@/lib/applications";
 import { Wordmark } from "@/components/Logo";
+import DisplaySettings from "@/components/DisplaySettings";
 import QuickSwitch from "@/components/QuickSwitch";
 import TopoField from "@/components/TopoField";
 
-// The role chip is informational, not clickable — kept neutral so Signal
-// stays exclusive to interactive elements (and Contour to resolved states).
+type NavItem = { href: string; label: string; match: (p: string) => boolean };
+
+// The register tab is active for the role's home and any of its application
+// detail routes; only the access route lights "User access".
+function recordsNav(role: Role): NavItem[] {
+  return role === "admin"
+    ? [
+        {
+          href: "/admin",
+          label: "Applications",
+          match: (p) => p === "/admin" || p.startsWith("/admin/applications"),
+        },
+        {
+          href: "/admin/access",
+          label: "User access",
+          match: (p) => p.startsWith("/admin/access"),
+        },
+      ]
+    : [
+        {
+          href: "/portal",
+          label: "Applications",
+          match: (p) => p === "/portal" || p.startsWith("/portal/applications"),
+        },
+      ];
+}
+
+const ACCOUNT_ITEM: NavItem = {
+  href: "/account",
+  label: "Account",
+  match: (p) => p.startsWith("/account"),
+};
 
 export default function AppShell({
   expect,
   children,
 }: {
-  expect: Role;
+  expect?: Role;
   children: React.ReactNode;
 }) {
   const account = useSession((s) => s.account);
@@ -28,108 +71,220 @@ export default function AppShell({
   const resetDemo = useApplications((s) => s.resetDemo);
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!account) router.replace("/");
-    else if (account.role !== expect) router.replace(roleHome(account.role));
+    if (!account) {
+      router.replace("/");
+      return;
+    }
+    if (expect && account.role !== expect) router.replace(roleHome(account.role));
   }, [hydrated, account, expect, router]);
 
-  // Blank frame while the persisted session restores or a redirect is pending.
-  if (!hydrated || !account || account.role !== expect) {
-    return <div aria-hidden className="min-h-dvh bg-void" />;
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // Escape closes the mobile drawer.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  // Shown while the persisted session restores or a redirect is pending.
+  if (!hydrated || !account || (expect && account.role !== expect)) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-void px-6">
+        <p
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-3 text-sm text-ash"
+        >
+          <span
+            aria-hidden
+            className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ash/25 border-t-signal"
+          />
+          Loading AGV Portal…
+        </p>
+      </div>
+    );
   }
 
-  return (
-    <div className="relative min-h-dvh">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 overflow-hidden opacity-50 [mask-image:linear-gradient(to_bottom,black,transparent)]">
-        <TopoField />
-      </div>
+  const nav = recordsNav(account.role);
 
-      <header className="relative z-10 border-b border-ash/10 bg-void/70 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-6">
+  return (
+    <div className="relative min-h-dvh lg:grid lg:grid-cols-[15.5rem_1fr]">
+      {/* mobile drawer backdrop */}
+      {menuOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={() => setMenuOpen(false)}
+          className="fixed inset-0 z-30 bg-void/70 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
+      {/* ——— sidebar ——— (an <aside> landmark so its masthead + identity/
+          session footer aren't orphaned outside any region; the distinct
+          aria-label keeps it unique against the demo banner's complementary
+          landmark) */}
+      <aside
+        id="primary-sidebar"
+        aria-label="Account and navigation"
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-ash/15 bg-pine/40 backdrop-blur-md transition-transform duration-200 lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:bg-pine/20 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* thin masthead accent rule — a small letterhead cue */}
+        <div aria-hidden className="h-0.5 bg-signal/70" />
+        <div className="flex h-16 items-center px-5">
           <Link href={roleHome(account.role)} className="shrink-0">
             <Wordmark hideTagOnMobile />
           </Link>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <span className="hidden font-mono text-[11px] text-ash lg:inline">
-              {account.name} · {account.title}
-            </span>
-            <span className="hidden rounded-full border border-ash/30 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bone sm:inline-block">
+        </div>
+
+        <nav aria-label="Primary" className="flex flex-col gap-0.5 px-3">
+          <SideGroupLabel>Records</SideGroupLabel>
+          {nav.map((item) => (
+            <SideLink key={item.href} item={item} active={item.match(pathname)} />
+          ))}
+          <SideGroupLabel>You</SideGroupLabel>
+          <SideLink item={ACCOUNT_ITEM} active={ACCOUNT_ITEM.match(pathname)} />
+        </nav>
+
+        <div className="mt-auto flex flex-col gap-3 border-t border-ash/15 px-5 py-4">
+          <div>
+            <p className="text-sm text-bone">{account.name}</p>
+            <p className="mt-1.5 inline-block rounded-full border border-ash/40 px-2.5 py-0.5 text-label uppercase tracking-[0.14em] text-ash">
               {account.role}
-            </span>
+            </p>
+          </div>
+          <div className="flex flex-col items-start gap-2.5">
+            {/* dev-only; QuickSwitch self-hides via showDevTools() */}
             <QuickSwitch />
-            {account.role === "admin" && (
+            {/* Reset demo data is now gated behind showDevTools(). Once Phase
+                10b makes the data real, an ungated reset in production could
+                destroy live records; keeping it fail-safe (hidden unless we can
+                confirm non-production) is the same guard as the dev switcher.
+                Also admin-only, as before. */}
+            {showDevTools() && account.role === "admin" && (
               <button
                 type="button"
                 onClick={resetDemo}
-                title="Restore applications to their original seed data"
-                className="hidden font-mono text-[10px] uppercase tracking-[0.14em] text-ash transition hover:text-amber md:inline"
+                title="Undo every change and put the demo back to how it started"
+                className="text-label font-semibold uppercase tracking-[0.12em] text-ash transition hover:text-amber"
               >
                 Reset demo data
               </button>
             )}
             <button
               type="button"
-              onClick={() => {
-                signOut();
+              onClick={async () => {
+                await signOut();
                 router.push("/");
               }}
-              className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash transition hover:text-bone"
+              className="text-label font-semibold uppercase tracking-[0.12em] text-ash transition hover:text-bone"
             >
               Sign out
             </button>
           </div>
         </div>
+      </aside>
 
-        {account.role === "admin" && (
-          <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6">
-            <NavTab href="/admin" label="Applications" active={isApplicationsTab(pathname)} />
-            <NavTab href="/admin/access" label="Access" active={pathname.startsWith("/admin/access")} />
-          </nav>
-        )}
-      </header>
-
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-24 pt-14">
-        {children}
-      </main>
-
-      <footer className="relative z-10 border-t border-ash/10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-5 font-mono text-[10px] uppercase tracking-[0.14em] text-ash/70 sm:flex-row sm:justify-between">
-          <span>© 2026 Artea Green Ventures</span>
-          <span>Demo environment — mock data only</span>
+      {/* ——— right column ——— */}
+      <div className="relative flex min-h-dvh flex-col">
+        {/* faint terrain band — kept quiet so it reads as letterhead texture */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-56 overflow-hidden opacity-25 [mask-image:linear-gradient(to_bottom,black,transparent)]">
+          <TopoField />
         </div>
-      </footer>
+
+        <header className="relative z-10 flex h-16 items-center gap-3 border-b border-ash/15 bg-void/70 px-4 backdrop-blur-md sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open navigation menu"
+            aria-expanded={menuOpen}
+            aria-controls="primary-sidebar"
+            className="inline-flex items-center justify-center rounded-md border border-ash/25 p-2 text-ash transition hover:border-signal/60 hover:text-signal lg:hidden"
+          >
+            <svg
+              aria-hidden
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            >
+              <path d="M2 4.5h14M2 9h14M2 13.5h14" />
+            </svg>
+          </button>
+          <div className="flex-1" />
+          <DisplaySettings />
+        </header>
+
+        <main
+          id="main-content"
+          className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-5 pb-24 pt-12 sm:px-8"
+        >
+          {children}
+        </main>
+
+        <footer className="relative z-10 border-t border-ash/15">
+          <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="font-display text-sm font-bold text-bone">
+                  Artea Green Ventures
+                </p>
+                <p className="mt-1 text-xs text-ash">
+                  Environmental compliance · Australia &amp; the Philippines
+                </p>
+              </div>
+              <div className="text-xs text-ash sm:text-right">
+                {/* gated on showDevTools() for consistency with the login
+                    "Demo build" chip — the "illustrative, not official" notice
+                    must not linger over real records in production */}
+                {showDevTools() && (
+                  <p>Demo environment — records shown are illustrative, not official.</p>
+                )}
+                <p className="mt-1">© 2026 Artea Green Ventures</p>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
 
-// The gallery tab is active for /admin and any /admin/applications/* route;
-// only /admin/access lights the Access tab.
-function isApplicationsTab(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/applications");
+function SideGroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="px-3 pb-1 pt-4 text-label font-semibold uppercase tracking-[0.14em] text-ash">
+      {children}
+    </p>
+  );
 }
 
-function NavTab({
-  href,
-  label,
-  active,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-}) {
+function SideLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
-      href={href}
+      href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`-mb-px border-b-2 py-3 font-mono text-[10px] uppercase tracking-[0.16em] transition ${
+      className={`rounded-md border-l-2 px-3 py-2 text-sm font-medium transition ${
         active
-          ? "border-signal text-signal"
-          : "border-transparent text-ash hover:text-bone"
+          ? "border-signal bg-signal/10 text-signal"
+          : "border-transparent text-ash hover:bg-void/40 hover:text-bone"
       }`}
     >
-      {label}
+      {item.label}
     </Link>
   );
 }
