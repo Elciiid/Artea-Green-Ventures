@@ -19,7 +19,9 @@ export async function generateMetadata({
   let clean = id;
   try {
     clean = decodeURIComponent(id);
-  } catch {}
+  } catch {
+    // malformed percent-encoding — fall back to the raw id
+  }
   const app = APPLICATIONS.find((a) => a.id.toLowerCase() === clean.toLowerCase());
   return { title: app ? app.id : "Application not found" };
 }
