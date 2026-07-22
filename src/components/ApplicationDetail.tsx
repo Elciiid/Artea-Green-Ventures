@@ -17,7 +17,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useReducedMotionPref } from "@/lib/preferences";
 import StatusChip from "@/components/StatusChip";
 import TopoPlate from "@/components/TopoPlate";
-import { useApplications } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import {
@@ -34,9 +33,18 @@ type Props = {
   app: Application;
   /** admins get a status select and an add-note form */
   canEdit?: boolean;
+  /** called with the new stage + the acting user's name; the caller owns persistence */
+  onStageChange?: (stage: Stage, actor: string) => void;
+  /** called with the note text + the acting user's name; the caller owns persistence */
+  onAddNote?: (text: string, actor: string) => void;
 };
 
-export default function ApplicationDetail({ app, canEdit = false }: Props) {
+export default function ApplicationDetail({
+  app,
+  canEdit = false,
+  onStageChange: onStageChangeProp,
+  onAddNote: onAddNoteProp,
+}: Props) {
   const reduced = useReducedMotionPref();
   const current = stageIndex(app.stage);
 
@@ -60,15 +68,13 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
           transition: { duration: 0.5, delay: i * 0.08, ease: EASE },
         };
 
-  const setStage = useApplications((s) => s.setStage);
-  const addNote = useApplications((s) => s.addNote);
   const account = useSession((s) => s.account);
   const actor = account?.name ?? "A. Mercer";
   const [note, setNote] = useState("");
 
   function onStageChange(e: ChangeEvent<HTMLSelectElement>) {
     const stage = e.target.value as Stage;
-    setStage(app.id, stage, actor);
+    onStageChangeProp?.(stage, actor);
     const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
     showToast(`Status changed to ${label}.`);
   }
@@ -77,7 +83,7 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
     e.preventDefault();
     const text = note.trim();
     if (!text) return;
-    addNote(app.id, text, actor);
+    onAddNoteProp?.(text, actor);
     setNote("");
     showToast("Note saved.");
   }
