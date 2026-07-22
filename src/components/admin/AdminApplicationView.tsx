@@ -6,7 +6,6 @@
 
 import Link from "next/link";
 import ApplicationDetail from "@/components/ApplicationDetail";
-import TopoField from "@/components/TopoField";
 import { useApplications } from "@/lib/applications";
 
 export default function AdminApplicationView({ id }: { id: string }) {
@@ -24,9 +23,9 @@ export default function AdminApplicationView({ id }: { id: string }) {
     <>
       <Link
         href="/admin"
-        className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash transition hover:text-signal"
+        className="text-label font-semibold uppercase tracking-[0.14em] text-ash transition hover:text-signal"
       >
-        ← All applications
+        ← Back to all applications
       </Link>
 
       {app ? (
@@ -34,20 +33,14 @@ export default function AdminApplicationView({ id }: { id: string }) {
           <ApplicationDetail app={app} canEdit />
         </div>
       ) : (
-        <div className="relative mt-10 overflow-hidden rounded-xl border border-dashed border-ash/25 py-20 text-center">
-          <TopoField
-            className="opacity-30"
-            seed={53}
-            peaks={[{ cx: 720, cy: 450, r0: 55, rings: 5, gap: 44 }]}
-          />
-          <div className="relative">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ash">
-              Unknown application
-            </p>
-            <p className="mt-2 text-sm text-ash/80">
-              No case in the demo data matches this ID.
-            </p>
-          </div>
+        <div className="mt-10 max-w-3xl border-y-2 border-bone/80 py-16 text-center">
+          <h1 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+            We couldn&apos;t find this application
+          </h1>
+          <p className="mt-2 text-sm text-ash">
+            Nothing matches that reference number. Check the link, or go back to
+            all applications.
+          </p>
         </div>
       )}
     </>
