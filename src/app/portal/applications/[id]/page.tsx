@@ -1,14 +1,10 @@
-// User application detail — the shared read-only view, gated by the user's
-// visibility list inside UserApplicationView.
+// User application detail — the shared read-only view, gated by RLS inside
+// UserApplicationView. Phase 10b-2: same generateStaticParams removal as the
+// admin route — see that file's comment.
 
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
 import UserApplicationView from "@/components/UserApplicationView";
-import { APPLICATIONS } from "@/lib/mock-data";
-
-export function generateStaticParams() {
-  return APPLICATIONS.map((a) => ({ id: a.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -22,8 +18,7 @@ export async function generateMetadata({
   } catch {
     // malformed percent-encoding — fall back to the raw id
   }
-  const app = APPLICATIONS.find((a) => a.id.toLowerCase() === clean.toLowerCase());
-  return { title: app ? app.id : "Not available" };
+  return { title: clean };
 }
 
 export default async function PortalApplicationPage({

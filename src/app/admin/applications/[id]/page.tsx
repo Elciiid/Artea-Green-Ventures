@@ -1,14 +1,13 @@
 // Admin application detail — renders the shared ApplicationDetail with
 // edit controls (status select, add note) via AdminApplicationView.
+// Phase 10b-2: no more generateStaticParams off mock data — the register now
+// reads real Supabase rows, so build-time params would drift from reality.
+// Vercel builds don't have DB connectivity by design (see the
+// migrate-deploy removal), so params are resolved per-request instead.
 
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
 import AdminApplicationView from "@/components/admin/AdminApplicationView";
-import { APPLICATIONS } from "@/lib/mock-data";
-
-export function generateStaticParams() {
-  return APPLICATIONS.map((a) => ({ id: a.id }));
-}
 
 export async function generateMetadata({
   params,
@@ -22,8 +21,7 @@ export async function generateMetadata({
   } catch {
     // malformed percent-encoding — fall back to the raw id
   }
-  const app = APPLICATIONS.find((a) => a.id.toLowerCase() === clean.toLowerCase());
-  return { title: app ? app.id : "Application not found" };
+  return { title: clean };
 }
 
 export default async function AdminApplicationPage({
