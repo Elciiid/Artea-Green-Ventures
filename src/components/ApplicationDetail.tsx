@@ -33,10 +33,10 @@ type Props = {
   app: Application;
   /** admins get a status select and an add-note form */
   canEdit?: boolean;
-  /** called with the new stage + the acting user's name; the caller owns persistence */
-  onStageChange?: (stage: Stage, actor: string) => void;
-  /** called with the note text + the acting user's name; the caller owns persistence */
-  onAddNote?: (text: string, actor: string) => void;
+  /** called with the new stage + the acting user's name; the caller owns persistence. A rejected promise shows an error toast instead of the success one. */
+  onStageChange?: (stage: Stage, actor: string) => Promise<void>;
+  /** called with the note text + the acting user's name; the caller owns persistence. A rejected promise shows an error toast instead of the success one. */
+  onAddNote?: (text: string, actor: string) => Promise<void>;
 };
 
 export default function ApplicationDetail({
@@ -72,20 +72,28 @@ export default function ApplicationDetail({
   const actor = account?.name ?? "A. Mercer";
   const [note, setNote] = useState("");
 
-  function onStageChange(e: ChangeEvent<HTMLSelectElement>) {
+  async function onStageChange(e: ChangeEvent<HTMLSelectElement>) {
     const stage = e.target.value as Stage;
-    onStageChangeProp?.(stage, actor);
-    const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
-    showToast(`Status changed to ${label}.`);
+    try {
+      await onStageChangeProp?.(stage, actor);
+      const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
+      showToast(`Status changed to ${label}.`);
+    } catch (err) {
+      showToast(err instanceof Error ? `Couldn't save: ${err.message}` : "Couldn't save the status change.");
+    }
   }
 
-  function onNoteSubmit(e: FormEvent) {
+  async function onNoteSubmit(e: FormEvent) {
     e.preventDefault();
     const text = note.trim();
     if (!text) return;
-    onAddNoteProp?.(text, actor);
-    setNote("");
-    showToast("Note saved.");
+    try {
+      await onAddNoteProp?.(text, actor);
+      setNote("");
+      showToast("Note saved.");
+    } catch (err) {
+      showToast(err instanceof Error ? `Couldn't save: ${err.message}` : "Couldn't save the note.");
+    }
   }
 
   const received = app.documents.filter((d) => d.status === "received").length;

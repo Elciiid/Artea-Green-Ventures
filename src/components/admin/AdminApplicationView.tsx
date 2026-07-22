@@ -1,31 +1,30 @@
 "use client";
 
 // Admin detail view: the same ApplicationDetail the user portal uses, with
-// edit controls enabled. Phase 10b-2 fetches the real record from Supabase
-// (fetchApplicationByReference) instead of the mock store.
-//
-// Status changes and notes stay LOCAL to this component's state for this
-// slice — 10b-2 is read-only against Supabase by design (writes land in
-// 10b-3). Routing them through onStageChange/onAddNote instead of hiding the
-// controls keeps Phase 16's interaction intact; a refresh discards the edit,
-// which is the honest behavior until 10b-3 makes it a real write.
+// edit controls enabled. Fetches the real record from Supabase
+// (fetchApplicationByReference); status changes and notes are real writes
+// (Phase 10b-3b) against agv_applications/agv_activity_entries — admin has
+// unconditional write access via the "applications — admin all" RLS policy
+// (10b-1), no grant needed. After a successful write, the component
+// refetches rather than hand-reconstructing the new state client-side, so
+// the UI always reflects exactly what's in the database.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ApplicationDetail from "@/components/ApplicationDetail";
-import { fetchApplicationByReference } from "@/lib/supabase/applications";
+import {
+  addActivityNote,
+  changeApplicationStage,
+  fetchApplicationByReference,
+} from "@/lib/supabase/applications";
 import { useSession } from "@/lib/session";
-import { PIPELINE, type Application, type Stage } from "@/lib/mock-data";
+import type { Application, Stage } from "@/lib/mock-data";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "not-found" }
   | { status: "ready"; app: Application };
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export default function AdminApplicationView({ id }: { id: string }) {
   const accountId = useSession((s) => s.account?.id);
@@ -59,39 +58,16 @@ export default function AdminApplicationView({ id }: { id: string }) {
     };
   }, [clean, accountId]);
 
-  function handleStageChange(stage: Stage, actor: string) {
-    setState((s) => {
-      if (s.status !== "ready") return s;
-      const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
-      return {
-        status: "ready",
-        app: {
-          ...s.app,
-          stage,
-          statusNote: undefined,
-          timeline: [
-            ...s.app.timeline,
-            { at: todayIso(), actor, kind: "status" as const, text: `Status moved to ${label}.` },
-          ],
-        },
-      };
-    });
+  async function handleStageChange(stage: Stage, actor: string) {
+    await changeApplicationStage(clean, stage, actor);
+    const app = await fetchApplicationByReference(clean);
+    if (app) setState({ status: "ready", app });
   }
 
-  function handleAddNote(text: string, actor: string) {
-    setState((s) => {
-      if (s.status !== "ready") return s;
-      return {
-        status: "ready",
-        app: {
-          ...s.app,
-          timeline: [
-            ...s.app.timeline,
-            { at: todayIso(), actor, kind: "comment" as const, text },
-          ],
-        },
-      };
-    });
+  async function handleAddNote(text: string, actor: string) {
+    await addActivityNote(clean, actor, text);
+    const app = await fetchApplicationByReference(clean);
+    if (app) setState({ status: "ready", app });
   }
 
   return (

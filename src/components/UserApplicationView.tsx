@@ -1,17 +1,25 @@
 "use client";
 
-// User-facing application detail: renders the shared ApplicationDetail
-// read-only. Phase 10b-2 fetches the real record from Supabase — RLS (10b-1)
-// already returns null for an application this account has no live grant
-// for, so there's no separate client-side visibility check anymore;
-// "doesn't exist" and "not granted" collapse into the same state on purpose.
+// User-facing application detail: read-only for a client, editable for
+// staff on an application they hold a live grant for (Phase 10b-3b — staff
+// got real write rights in 10b-3a's role model change; client stays
+// read-only always, no exceptions). RLS (10b-1) already returns null for an
+// application this account has no live grant for, so there's no separate
+// client-side visibility check; "doesn't exist" and "not granted" collapse
+// into the same state on purpose. canEdit here only controls whether edit
+// controls are SHOWN — Postgres, not this component, decides whether a
+// write actually succeeds.
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ApplicationDetail from "@/components/ApplicationDetail";
-import { fetchApplicationByReference } from "@/lib/supabase/applications";
+import {
+  addActivityNote,
+  changeApplicationStage,
+  fetchApplicationByReference,
+} from "@/lib/supabase/applications";
 import { useSession } from "@/lib/session";
-import type { Application } from "@/lib/mock-data";
+import type { Application, Stage } from "@/lib/mock-data";
 
 type LoadState =
   | { status: "loading" }
@@ -20,7 +28,9 @@ type LoadState =
   | { status: "ready"; app: Application };
 
 export default function UserApplicationView({ id }: { id: string }) {
-  const accountId = useSession((s) => s.account?.id);
+  const account = useSession((s) => s.account);
+  const accountId = account?.id;
+  const canEdit = account?.role === "staff";
 
   let clean = id;
   try {
@@ -51,6 +61,18 @@ export default function UserApplicationView({ id }: { id: string }) {
     };
   }, [clean, accountId]);
 
+  async function handleStageChange(stage: Stage, actor: string) {
+    await changeApplicationStage(clean, stage, actor);
+    const app = await fetchApplicationByReference(clean);
+    if (app) setState({ status: "ready", app });
+  }
+
+  async function handleAddNote(text: string, actor: string) {
+    await addActivityNote(clean, actor, text);
+    const app = await fetchApplicationByReference(clean);
+    if (app) setState({ status: "ready", app });
+  }
+
   return (
     <>
       <Link
@@ -62,7 +84,12 @@ export default function UserApplicationView({ id }: { id: string }) {
 
       {state.status === "ready" ? (
         <div className="mt-8">
-          <ApplicationDetail app={state.app} />
+          <ApplicationDetail
+            app={state.app}
+            canEdit={canEdit}
+            onStageChange={canEdit ? handleStageChange : undefined}
+            onAddNote={canEdit ? handleAddNote : undefined}
+          />
         </div>
       ) : state.status === "loading" ? (
         <div className="mt-10 max-w-3xl border-y-2 border-bone/80 py-16 text-center">

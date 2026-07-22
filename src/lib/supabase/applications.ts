@@ -8,7 +8,7 @@
 // non-admins — the access boundary is enforced by Postgres, not this code.
 
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { Application, DocumentItem, TimelineEntry, Stage } from "@/lib/mock-data";
+import { PIPELINE, type Application, type DocumentItem, type TimelineEntry, type Stage } from "@/lib/mock-data";
 
 type ApplicationRow = {
   id: string;
@@ -153,4 +153,71 @@ export async function fetchApplicationByReference(
     (docsResult.data ?? []) as DocumentRow[],
     (activityResult.data ?? []) as ActivityRow[]
   );
+}
+
+/**
+ * Resolve a display reference to its real uuid. Writes need the uuid
+ * (agv_activity_entries.application_id is a FK to it), but the Application
+ * type only carries the reference — reads never needed the uuid, so it was
+ * never threaded through. RLS still gates this the same as any other read:
+ * an application this account can't see resolves to null here too.
+ */
+async function findApplicationId(reference: string): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("agv_applications")
+    .select("id")
+    .ilike("reference", escapeLike(reference))
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+/**
+ * Change an application's stage and log the matching activity entry, same
+ * pairing the old local-only shim did (a stage change with no timeline entry
+ * would never show up in the UI, which reads the timeline, not app.stage's
+ * own history). Not atomic — two sequential writes, not one transaction.
+ * Accepted simplification for this phase; no RPC/transaction wrapper yet.
+ */
+export async function changeApplicationStage(
+  reference: string,
+  stage: Stage,
+  actor: string
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  const applicationId = await findApplicationId(reference);
+  if (!applicationId) throw new Error(`${reference} not found or not accessible.`);
+
+  const { error: updateError } = await supabase
+    .from("agv_applications")
+    .update({ stage, status_note: null })
+    .eq("id", applicationId);
+  if (updateError) throw updateError;
+
+  const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
+  const { error: activityError } = await supabase.from("agv_activity_entries").insert({
+    application_id: applicationId,
+    occurred_at: new Date().toISOString(),
+    actor,
+    kind: "status",
+    body: `Status moved to ${label}.`,
+  });
+  if (activityError) throw activityError;
+}
+
+/** Add a comment entry to an application's activity timeline. */
+export async function addActivityNote(reference: string, actor: string, text: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const applicationId = await findApplicationId(reference);
+  if (!applicationId) throw new Error(`${reference} not found or not accessible.`);
+
+  const { error } = await supabase.from("agv_activity_entries").insert({
+    application_id: applicationId,
+    occurred_at: new Date().toISOString(),
+    actor,
+    kind: "comment",
+    body: text,
+  });
+  if (error) throw error;
 }
