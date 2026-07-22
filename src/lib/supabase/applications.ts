@@ -45,6 +45,14 @@ type ActivityRow = {
 const APPLICATION_COLUMNS =
   "id, reference, title, service, sector, location, country, coords, stage, status_note, lead, client_name, hero, submitted_at";
 
+// ilike treats %/_ as wildcards; references never legitimately contain them,
+// so escape rather than let a stray wildcard in the URL match more than one
+// row (which would surface as a generic error instead of the correct
+// not-found/blocked state via .maybeSingle()'s "multiple rows" error).
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
 function toDocument(row: DocumentRow): DocumentItem {
   return {
     name: row.name,
@@ -119,7 +127,7 @@ export async function fetchApplicationByReference(
   const { data: appRow, error: appError } = await supabase
     .from("agv_applications")
     .select(APPLICATION_COLUMNS)
-    .ilike("reference", reference)
+    .ilike("reference", escapeLike(reference))
     .maybeSingle();
   if (appError) throw appError;
   if (!appRow) return null;

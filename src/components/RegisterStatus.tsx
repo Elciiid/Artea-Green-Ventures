@@ -41,7 +41,7 @@ export default function RegisterStatus({
         ) : (
           <>
             <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
-              We couldn&apos;t load your applications
+              We couldn&apos;t load {title.toLowerCase()}
             </h2>
             <p className="mt-2 text-sm text-ash">{message}</p>
           </>
