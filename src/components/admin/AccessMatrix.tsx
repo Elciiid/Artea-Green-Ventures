@@ -5,13 +5,14 @@
 // instant-apply (no save step). Signal marks the checked/active cell since
 // it's the interactive affordance.
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useReducedMotionPref } from "@/lib/preferences";
 import { useApplications } from "@/lib/applications";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function AccessMatrix() {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionPref();
   const applications = useApplications((s) => s.applications);
   const users = useApplications((s) => s.users);
   const toggleVisibility = useApplications((s) => s.toggleVisibility);
@@ -29,31 +30,32 @@ export default function AccessMatrix() {
   return (
     <>
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-signal">
+        <p className="text-label font-semibold uppercase tracking-[0.18em] text-signal">
           Admin console
         </p>
-        <h1 className="mt-3 font-display text-4xl font-black tracking-[-0.02em] text-bone sm:text-5xl">
-          Access
+        <h1 className="mt-3 font-display text-4xl font-bold text-bone sm:text-5xl">
+          User access
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-ash">
-          Grant each staff member access to the engagements they&apos;re working
-          on. Changes apply immediately to that user&apos;s portal.
+          Choose which applications each person can see. Check a box to give
+          access, uncheck it to take access away. Changes save on their own and
+          take effect right away.
         </p>
       </div>
 
       <motion.section
         {...enter}
-        aria-label="User visibility matrix"
-        className="mt-10 overflow-x-auto rounded-xl border border-ash/15 bg-pine"
+        aria-label="Application access by user"
+        className="mt-9 overflow-x-auto border-y-2 border-bone/80"
       >
         <table className="w-full min-w-[720px] border-collapse">
           <thead>
-            <tr className="border-b border-ash/10">
+            <tr className="border-b border-ash/30">
               <th
                 scope="col"
-                className="w-64 px-6 py-4 text-left font-mono text-[10px] uppercase tracking-[0.16em] text-ash"
+                className="w-64 px-4 py-3 pl-1 text-left text-label font-semibold uppercase tracking-[0.12em] text-ash"
               >
-                Staff member
+                Person
               </th>
               {applications.map((app) => (
                 <th
@@ -61,7 +63,7 @@ export default function AccessMatrix() {
                   scope="col"
                   className="px-4 py-4 text-left align-bottom"
                 >
-                  <span className="block font-mono text-[10px] tracking-[0.1em] text-ash">
+                  <span className="block font-mono text-label tracking-[0.1em] text-ash">
                     {app.id}
                   </span>
                   <span className="mt-1 block max-w-[160px] text-[13px] font-medium leading-snug text-bone">
@@ -75,25 +77,25 @@ export default function AccessMatrix() {
             {normalUsers.map((user) => {
               const count = user.visibleApplicationIds.length;
               return (
-                <tr key={user.id} className="border-b border-ash/10 last:border-b-0">
-                  <th scope="row" className="px-6 py-5 text-left">
+                <tr key={user.id} className="border-b border-ash/15 last:border-b-0">
+                  <th scope="row" className="py-5 pl-1 pr-4 text-left align-top">
                     <span className="block font-display text-sm font-bold text-bone">
                       {user.name}
                     </span>
-                    <span className="mt-0.5 block font-mono text-[10px] text-ash">
+                    <span className="mt-0.5 block font-mono text-xs text-ash">
                       {user.id}
                     </span>
                     <span
                       aria-live="polite"
-                      className="mt-1 block font-mono text-[9px] uppercase tracking-[0.14em] text-ash/70"
+                      className="mt-1 block text-label uppercase tracking-[0.1em] text-ash"
                     >
-                      {count} of {applications.length} visible
+                      Can see {count} of {applications.length}
                     </span>
                   </th>
                   {applications.map((app) => {
                     const checked = user.visibleApplicationIds.includes(app.id);
                     return (
-                      <td key={app.id} className="px-4 py-5">
+                      <td key={app.id} className="px-4 py-5 align-top">
                         <button
                           type="button"
                           role="checkbox"
@@ -127,8 +129,8 @@ export default function AccessMatrix() {
         </table>
       </motion.section>
 
-      <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.14em] text-ash/60">
-        Admins always see every application · changes are instant
+      <p className="mt-3 text-xs text-ash">
+        Administrators can always see every application.
       </p>
     </>
   );
