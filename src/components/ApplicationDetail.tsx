@@ -4,14 +4,19 @@
 // the admin detail route (`canEdit` adds a status select and an add-note
 // form that write to the reactive applications store).
 //
-// Note on color logic: the stepper uses POSITION-relative colors (done =
-// Contour, current = Amber pulsing, upcoming = dim Ash) — deliberately
-// distinct from the StatusChip's 3-tier semantics.
+// Phase 16 reworked this from a stack of rounded cards into a ruled document:
+// a letterhead leading with the reference number, sections separated by rules
+// rather than card borders, a constrained text measure, and a colophon footer.
+//
+// Color logic note: the stepper uses POSITION-relative colors (done = Contour,
+// current = Amber pulsing, upcoming = Ash) — deliberately distinct from the
+// StatusChip's 3-tier semantics.
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import SitePhoto from "@/components/SitePhoto";
+import { AnimatePresence, motion } from "framer-motion";
+import { useReducedMotionPref } from "@/lib/preferences";
 import StatusChip from "@/components/StatusChip";
+import TopoPlate from "@/components/TopoPlate";
 import { useApplications } from "@/lib/applications";
 import { formatDate } from "@/lib/format";
 import { useSession } from "@/lib/session";
@@ -27,12 +32,12 @@ const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 type Props = {
   app: Application;
-  /** admins get an "Update status" select and an add-note form */
+  /** admins get a status select and an add-note form */
   canEdit?: boolean;
 };
 
 export default function ApplicationDetail({ app, canEdit = false }: Props) {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionPref();
   const current = stageIndex(app.stage);
 
   const [toast, setToast] = useState<string | null>(null);
@@ -50,9 +55,9 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
     reduced
       ? {}
       : {
-          initial: { opacity: 0, y: 18 },
+          initial: { opacity: 0, y: 14 },
           animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.6, delay: i * 0.09, ease: EASE },
+          transition: { duration: 0.5, delay: i * 0.08, ease: EASE },
         };
 
   const setStage = useApplications((s) => s.setStage);
@@ -65,7 +70,7 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
     const stage = e.target.value as Stage;
     setStage(app.id, stage, actor);
     const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
-    showToast(`Status updated to ${label}.`);
+    showToast(`Status changed to ${label}.`);
   }
 
   function onNoteSubmit(e: FormEvent) {
@@ -74,33 +79,49 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
     if (!text) return;
     addNote(app.id, text, actor);
     setNote("");
-    showToast("Note added to the activity log.");
+    showToast("Note saved.");
   }
 
-  return (
-    <div>
-      {/* ——— header ——— */}
-      <motion.div {...enter(0)} className="relative">
-        {/* treated site photo as a quiet accent behind the title */}
-        <SitePhoto
-          src={app.hero}
-          priority
-          sizes="(max-width: 1024px) 40vw, 420px"
-          className="absolute right-0 top-0 hidden h-40 w-1/2 opacity-55 [mask-image:linear-gradient(to_left,black_5%,transparent_80%)] sm:block"
-        />
+  const received = app.documents.filter((d) => d.status === "received").length;
 
-        <div className="relative">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-[11px] tracking-[0.14em] text-ash">{app.id}</span>
-            <StatusChip stage={app.stage} note={app.statusNote} />
-          </div>
-          <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.02em] text-bone sm:text-4xl lg:text-5xl">
-            {app.title}
-          </h1>
-          <p className="mt-2 text-sm text-ash">{app.service}</p>
+  return (
+    <article className="max-w-3xl">
+      {/* ——— letterhead ——— */}
+      <motion.header {...enter(0)} className="border-b-2 border-bone/80 pb-6">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <p className="text-label font-semibold uppercase tracking-[0.18em] text-ash">
+            Artea Green Ventures · Environmental compliance
+          </p>
+          <StatusChip stage={app.stage} note={app.statusNote} />
         </div>
 
-        <dl className="relative mt-7 grid max-w-3xl grid-cols-2 gap-x-6 gap-y-5 border-t border-ash/10 pt-6 sm:grid-cols-3">
+        <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="font-mono text-sm text-ash">
+              Reference{" "}
+              <span className="font-medium text-bone">{app.id}</span>
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-bold text-bone sm:text-4xl">
+              {app.title}
+            </h1>
+            <p className="mt-2 text-sm text-ash">{app.service}</p>
+          </div>
+
+          {/* the contour motif as a bounded site figure, not wallpaper */}
+          <TopoPlate
+            seed={Number(app.id.slice(-4)) || 7}
+            peaks={[{ cx: 720, cy: 400, r0: 120, rings: 8, gap: 66 }]}
+            caption={
+              <>
+                <span>Site</span>
+                <span>{app.coords}</span>
+              </>
+            }
+            className="hidden h-28 w-56 shrink-0 sm:block"
+          />
+        </div>
+
+        <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
           <Meta k="Sector" v={app.sector} />
           <Meta k="Location" v={app.location} />
           <Meta k="Client" v={app.clientName} />
@@ -108,31 +129,27 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
           <Meta k="Submitted" v={formatDate(app.submitted)} />
           <Meta k="Coordinates" v={app.coords} mono />
         </dl>
-      </motion.div>
+      </motion.header>
 
-      {/* ——— status stepper ——— */}
-      <motion.section
-        {...enter(1)}
-        aria-label="Pipeline position"
-        className="mt-10 rounded-xl border border-ash/15 bg-pine p-6 sm:p-8"
-      >
+      {/* ——— progress ——— */}
+      <motion.section {...enter(1)} aria-label="Progress" className="border-b border-ash/25 py-8">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-ash">
-            Pipeline position
+          <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+            Progress
           </h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-ash/60">
-              Stage {current + 1} of {PIPELINE.length}
+            <span className="font-mono text-xs text-ash">
+              Step {current + 1} of {PIPELINE.length}
             </span>
             {canEdit && (
               <label className="flex items-center gap-2">
-                <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-ash">
-                  Update status
+                <span className="text-label font-semibold uppercase tracking-[0.12em] text-ash">
+                  Change status
                 </span>
                 <select
                   value={app.stage}
                   onChange={onStageChange}
-                  className="rounded-md border border-ash/25 bg-void/70 px-2.5 py-1.5 font-mono text-[11px] text-bone outline-none transition focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
+                  className="rounded-md border border-ash/30 bg-void/60 px-2.5 py-1.5 font-mono text-xs text-bone outline-none transition focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
                 >
                   {PIPELINE.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -146,8 +163,7 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
         </div>
 
         <div className="relative mt-9">
-          {/* track + progress, spanning first to last node centers */}
-          <div aria-hidden className="absolute left-[10%] right-[10%] top-[13px] h-px bg-ash/20" />
+          <div aria-hidden className="absolute left-[10%] right-[10%] top-[13px] h-px bg-ash/25" />
           <motion.div
             aria-hidden
             className="absolute left-[10%] top-[13px] h-px bg-contour"
@@ -185,17 +201,17 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
                     </span>
                   )}
                   {state === "todo" && (
-                    <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-ash/30 bg-void/40">
-                      <span className="h-1.5 w-1.5 rounded-full bg-ash/30" aria-hidden />
+                    <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-ash/40 bg-void/30">
+                      <span className="h-1.5 w-1.5 rounded-full bg-ash/50" aria-hidden />
                     </span>
                   )}
                   <span
-                    className={`px-1 font-mono text-[9px] uppercase leading-tight tracking-[0.1em] sm:text-[10px] sm:tracking-[0.14em] ${
+                    className={`px-1 text-label uppercase leading-tight tracking-[0.08em] ${
                       state === "done"
-                        ? "text-contour/80"
+                        ? "text-contour"
                         : state === "current"
-                          ? "text-amber"
-                          : "text-ash/45"
+                          ? "text-amber font-semibold"
+                          : "text-ash"
                     }`}
                   >
                     {stage.label}
@@ -205,105 +221,110 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
             })}
           </ol>
         </div>
+
+        <p className="mt-8 max-w-prose text-sm leading-relaxed text-ash">
+          {PIPELINE[current]?.description}
+        </p>
       </motion.section>
 
-      {/* ——— documents + activity ——— */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <motion.section
-          {...enter(2)}
-          aria-label="Documents"
-          className="min-w-0 rounded-xl border border-ash/15 bg-pine p-6 lg:col-span-3"
-        >
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-ash">Documents</h2>
-            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-ash/60">
-              {app.documents.filter((d) => d.status === "received").length} of{" "}
-              {app.documents.length} received
-            </span>
-          </div>
+      {/* ——— documents ——— */}
+      <motion.section {...enter(2)} aria-label="Documents" className="border-b border-ash/25 py-8">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+            Documents
+          </h2>
+          <span className="font-mono text-xs text-ash">
+            {received} of {app.documents.length} received
+          </span>
+        </div>
 
-          <ul className="mt-4 divide-y divide-ash/10">
-            {app.documents.map((doc) => (
-              <li key={doc.name} className="flex items-center gap-4 py-3.5">
-                <FileBadge name={doc.name} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-bone">{doc.name}</p>
-                  <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-ash">
-                    {doc.kind} · {doc.size} ·{" "}
-                    {doc.uploaded ? formatDate(doc.uploaded) : "awaiting upload"}
-                  </p>
-                </div>
-                {doc.status === "received" ? (
-                  <button
-                    type="button"
-                    onClick={() => showToast("Preview isn't wired up in this demo.")}
-                    className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-signal transition hover:brightness-125"
-                  >
-                    View
-                  </button>
-                ) : (
-                  <span className="shrink-0 rounded-full border border-amber/40 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-amber">
-                    Pending
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </motion.section>
-
-        <motion.section
-          {...enter(3)}
-          aria-label="Activity"
-          className="min-w-0 rounded-xl border border-ash/15 bg-pine p-6 lg:col-span-2"
-        >
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.2em] text-ash">Activity</h2>
-
-          <ol className="relative mt-5">
-            <span aria-hidden className="absolute bottom-1 left-[3px] top-1 w-px bg-ash/15" />
-            {app.timeline.map((entry, i) => (
-              <li key={`${entry.at}-${i}`} className="relative pb-6 pl-6 last:pb-0">
-                <span
-                  aria-hidden
-                  className={`absolute left-0 top-1 h-[7px] w-[7px] rounded-full ${
-                    entry.kind === "system" ? "bg-ash/40" : "bg-ash/80"
-                  }`}
-                />
-                <p className="font-mono text-[10px] tracking-[0.08em] text-ash">
-                  {formatDate(entry.at)} — {entry.actor}
+        <ul className="mt-4 divide-y divide-ash/15 border-t border-ash/15">
+          {app.documents.map((doc) => (
+            <li key={doc.name} className="flex items-center gap-4 py-3.5">
+              <FileBadge name={doc.name} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-bone">{doc.name}</p>
+                <p className="mt-0.5 font-mono text-xs text-ash">
+                  {doc.kind} · {doc.size} ·{" "}
+                  {doc.uploaded ? formatDate(doc.uploaded) : "not received yet"}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-bone/90">{entry.text}</p>
-              </li>
-            ))}
-          </ol>
-
-          {canEdit && (
-            <form onSubmit={onNoteSubmit} className="mt-6 border-t border-ash/10 pt-5">
-              <label
-                htmlFor="add-note"
-                className="font-mono text-[9px] uppercase tracking-[0.18em] text-ash"
-              >
-                Add note — logs as {actor}
-              </label>
-              <div className="mt-2 flex gap-2">
-                <input
-                  id="add-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Internal note for the activity log"
-                  className="min-w-0 flex-1 rounded-md border border-ash/20 bg-void/70 px-3 py-2 text-xs text-bone outline-none transition placeholder:text-ash/40 focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
-                />
-                <button
-                  type="submit"
-                  disabled={!note.trim()}
-                  className="shrink-0 rounded-md bg-signal px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Add
-                </button>
               </div>
-            </form>
-          )}
-        </motion.section>
-      </div>
+              {doc.status === "received" ? (
+                <button
+                  type="button"
+                  onClick={() => showToast("You can't open documents in this demo.")}
+                  className="shrink-0 text-sm font-medium text-signal underline decoration-ash/40 decoration-1 underline-offset-4 transition hover:decoration-signal"
+                >
+                  View
+                </button>
+              ) : (
+                <span className="shrink-0 rounded-full border border-amber/50 px-2.5 py-0.5 text-label uppercase tracking-[0.12em] text-amber">
+                  Not received
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </motion.section>
+
+      {/* ——— activity ——— */}
+      <motion.section {...enter(3)} aria-label="Activity" className="py-8">
+        <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+          Activity
+        </h2>
+
+        <ol className="relative mt-5 max-w-prose">
+          <span aria-hidden className="absolute bottom-1 left-[3px] top-1 w-px bg-ash/20" />
+          {app.timeline.map((entry, i) => (
+            <li key={`${entry.at}-${i}`} className="relative pb-6 pl-6 last:pb-0">
+              <span
+                aria-hidden
+                className={`absolute left-0 top-1 h-[7px] w-[7px] rounded-full ${
+                  entry.kind === "system" ? "bg-ash/50" : "bg-ash"
+                }`}
+              />
+              <p className="font-mono text-xs text-ash">
+                {formatDate(entry.at)} — {entry.actor}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-bone">{entry.text}</p>
+            </li>
+          ))}
+        </ol>
+
+        {canEdit && (
+          <form onSubmit={onNoteSubmit} className="mt-6 max-w-prose border-t border-ash/15 pt-5">
+            <label
+              htmlFor="add-note"
+              className="text-label font-semibold uppercase tracking-[0.12em] text-ash"
+            >
+              Add a note — saved as {actor}
+            </label>
+            <div className="mt-2 flex gap-2">
+              <input
+                id="add-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Type your note"
+                className="min-w-0 flex-1 rounded-md border border-ash/25 bg-void/60 px-3 py-2 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
+              />
+              <button
+                type="submit"
+                disabled={!note.trim()}
+                className="shrink-0 rounded-md bg-signal px-4 py-2 font-display text-sm font-bold text-void transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Save note
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.section>
+
+      {/* ——— colophon ——— */}
+      <footer className="mt-2 border-t-2 border-bone/80 pt-5">
+        <p className="font-mono text-xs text-ash">
+          {app.id} · Artea Green Ventures · Demo record, not an official document
+        </p>
+      </footer>
 
       {/* ——— toast ——— */}
       <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
@@ -315,7 +336,7 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: reduced ? 0 : 10 }}
               transition={{ duration: 0.25, ease: EASE }}
-              className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-ash/25 bg-pine px-5 py-2.5 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.8)]"
+              className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-ash/25 bg-pine px-5 py-2.5 shadow-[var(--shadow-pop)]"
             >
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-amber" />
               <span className="text-xs text-bone">{toast}</span>
@@ -323,14 +344,14 @@ export default function ApplicationDetail({ app, canEdit = false }: Props) {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </article>
   );
 }
 
 function Meta({ k, v, mono = false }: { k: string; v: string; mono?: boolean }) {
   return (
     <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-ash">{k}</dt>
+      <dt className="text-label font-semibold uppercase tracking-[0.14em] text-ash">{k}</dt>
       <dd className={`mt-1.5 text-sm text-bone ${mono ? "font-mono text-[13px]" : ""}`}>{v}</dd>
     </div>
   );
@@ -350,7 +371,7 @@ function FileBadge({ name }: { name: DocumentItem["name"] }) {
   return (
     <span
       aria-hidden
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-ash/20 bg-void/60 font-mono text-[9px] tracking-[0.08em] text-ash"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-ash/25 bg-void/40 font-mono text-label tracking-[0.06em] text-ash"
     >
       {label}
     </span>
