@@ -1,44 +1,130 @@
 # AGV Portal — Status
-Updated: 2026-07-14 22:39
-Phase: Phase 8 (final) — Sydney Gateway Swap + Hero Imagery with Corrected Treatment
-State: complete
+Updated: 2026-07-22 21:40
+Phase: 10b-2 — Rewire reads to real data
+State: **Complete and verified.** Final whole-branch review: ready to merge. Next up: 10b-3 (writes + grant/revoke UI + Storage).
 
 ## Done this session
-- **Content swap:** Application #3 (previously the Manila social-housing flood assessment) is now **Sydney Gateway — Environmental Compliance Audit** · Transportation · Sydney, AU · Transport for NSW · stage *Submitted / Pending documents* (pipeline spread preserved: Under Review / Report Issued / Submitted)
-  - New case ID `AGV-2026-0161` following the existing `AGV-2026-nnnn` convention; submitted 08 Jul 2026; coordinates -33.9268 / 151.1710 (St Peters / airport interchange)
-  - Lead kept as R. Santiago — user2 *is* R. Santiago, so the assigned staff member remains the project lead, which keeps the access-matrix story coherent
-  - Invented documents (EIS Rev A received; Air Quality & Noise Assessment and St Peters Contaminated Land Survey pending) and a 3-entry timeline, matching the tone/detail of the other two applications
-  - Visibility slot untouched: user2 still has exactly this one application; user1 still has Parramatta + Western Harbour
-- **Identifier rename:** the routing identifier for an application *is* its case ID, so `AGV-2026-0155` → `AGV-2026-0161` everywhere it's used — routes (`/admin/applications/[id]`, `/portal/applications/[id]` both prerender the new ID), the store's seeded `visibleApplicationIds`, and the hero filename mapping (`app-sydney-gateway-hero.*`). Repo-wide case-insensitive grep for `manila` now returns **only** this STATUS.md changelog line — no live code, data, routes or assets
-- **Persisted-state migration:** bumped the applications store to `version: 2` with a `migrate` that re-seeds. Without it, any browser holding demo state from a previous session would have resurrected the deleted Manila record (and pointed user2's visibility at a dead ID). Verified by planting a stale v1 store containing Manila and confirming it was discarded and re-seeded
-- **Hero imagery wired up, with the treatment split corrected:**
-  - `login-hero.jfif` (1376×768, mean luminance 0.09) is Gemini-generated glowing-contour terrain already in-palette → used **unfiltered**; only legibility gradients sit over it. The SVG TopoField motif is kept at reduced opacity so the pointer parallax still works without competing with the art
-  - `app-parramatta-hero`, `app-western-harbour-hero`, `app-sydney-gateway-hero` are real daylight site photography (a red-liveried light rail tram, an aerial of the Harbour Bridge, the Sydney Gateway bridge) at luminance 0.19–0.47 → run through the full `SitePhoto` treatment: `grayscale contrast-125 brightness-[0.42]`, a Contour duotone via `mix-blend-color` at 60%, then a Void wash at 45%
-  - Photos appear as masked accent panels on the gallery cards (contour lines riding over them) and as a quiet accent behind the detail-page title
-- Verified end-to-end in the browser: correct photo per application and treatment applied (login hero confirmed *without* it), full Sydney Gateway content on the detail page, user2's portal showing exactly Sydney Gateway, stale-store migration, no horizontal overflow at 375px, zero console errors, clean build
+Rewired every application-reading surface except `/admin/access` off the mock Zustand
+store onto real Supabase queries, filtered by RLS (proven in 10b-1) instead of
+client-side visibility logic — with proper async loading/error states, and the admin's
+edit UI kept interactive via local-only React state (10b-2 is read-only against
+Supabase by design; real writes are 10b-3).
+
+Executed via subagent-driven development: 7 implementation tasks, each with an
+independent implementer + task-scoped code reviewer, plus a fresh browser-based
+pixel-parity and RLS check performed directly by me against the live app for every
+task with rendered UI output — not inherited from a prior task's check. Full ledger:
+`.superpowers/sdd/progress.md`. Plan: `docs/superpowers/plans/2026-07-22-agv-10b-2-rewire-reads.md`.
+
+**A process note worth flagging:** several target files already carried substantial
+*uncommitted* work from earlier sessions (the Phase 16 ruled-detail redesign, sitting
+in the working tree since before this execution began). Committing "just the task's
+file" would have silently swept that unrelated work into the task's commit. I caught
+this after Task 5's first pass did exactly that (and the task reviewer correctly
+flagged it), then pre-emptively isolated the remaining affected files into their own
+"carry forward pre-existing work" commits before dispatching Tasks 6-8, so every task
+commit stays properly scoped to only what that task actually did.
+
+## Commit policy for this session (read before assuming anything is "saved")
+Per your explicit approval, I committed locally as each task completed — this is what
+let the subagent review-diffing mechanism work as designed, and gives you a real,
+inspectable history of what changed and why. **Nothing was pushed anywhere.** It's
+still 100% yours to squash, rewrite, or reset before it ever leaves this machine. New
+commits since the last status update: `bd93bfa` through `32fb519` (17 commits — 7 task
+commits, 4 pre-existing-work isolation commits, the seed ordering fix, and a small
+post-review polish commit). Run `git log bd93bfa~1..HEAD --oneline` to see the full list.
+
+## RLS verification — through the running UI this time (10b-1 proved it via direct API calls)
+- **admin@agv-demo.com** — `/admin` shows all 3 applications, pixel-identical to Phase
+  16. `/admin/applications/AGV-2026-0142` — every field matches `mock-data.ts` exactly,
+  **including document order** (EIS Addendum → Noise & Vibration → Groundwater → Site
+  Access — confirms the seed's `created_at` staggering fix took effect). Changed status
+  via the real dropdown: chip/stepper/activity updated live; reloaded — reverted to
+  "Under Review", confirming the edit is session-local only, as designed.
+- **user1@agv-demo.com** — `/portal` shows exactly 2 applications (`AGV-2026-0142`,
+  `AGV-2026-0118`). Direct navigation to `/portal/applications/AGV-2026-0161` (exists,
+  granted to user2 not user1) and to `/portal/applications/AGV-2026-9999` (doesn't
+  exist) both render the identical "You don't have access to this application" state —
+  no crash, no blank screen, no console errors — confirming RLS collapses "not found"
+  and "not granted" as designed.
+- **user2@agv-demo.com** — `/portal` shows exactly 1 application (`AGV-2026-0161`).
+  `/portal/applications/AGV-2026-0142` (granted to user1, not user2) — same correct
+  blocked state.
+- **Non-admin route boundary** — user1 hitting `/admin` or `/admin/applications/AGV-2026-0142`
+  directly is redirected to `/portal` before `AdminDashboard`/`AdminApplicationView`
+  ever render or query — the admin surfaces are unreachable by a non-admin, not merely
+  filtered.
+- **Phase 10a/10c regression check** — `/account` (password change, MFA) and
+  `/admin/access` (still mock-backed, untouched by this slice) both render normally.
+- **Known limitation:** the QuickSwitch same-route no-reload refetch path (the reason
+  every rewired component's fetch is keyed on account identity, not just mount) was
+  verified at the code level only — confirmed present and correct by every task
+  reviewer and the final reviewer — not exercised via an actual QuickSwitch click,
+  because the Browser pane wasn't compositing/visible this session (confirmed via
+  repeated failed screenshot calls; DOM-read tools worked fine). All cross-account
+  checks above used a direct auth-token cookie swap + forced reload instead, which
+  proves per-account data correctness but doesn't exercise the no-reload path
+  specifically. Low-risk residual gap: it rests on two already-established facts
+  (React re-runs effects when a dependency changes; `useSession`'s account state
+  updates via `onAuthStateChange`, unchanged since Phase 10a), not new logic this
+  slice introduced.
 
 ## Files added/changed
-- `src/lib/mock-data.ts` — Manila record replaced by Sydney Gateway (new ID, docs, timeline, coords); added a `hero` field to `Application` and mapped all three photos
-- `src/lib/applications.ts` — user2's seeded visibility → `AGV-2026-0161`; persist `version: 2` + `migrate` re-seed
-- `src/components/SitePhoto.tsx` — new; the photo treatment pipeline (real photography only)
-- `src/components/ApplicationGallery.tsx` — treated hero panel on each card, under the contour lines
-- `src/components/ApplicationDetail.tsx` — treated hero accent behind the header
-- `src/app/page.tsx` — login hero rendered unfiltered with legibility scrims; TopoField opacity reduced
-- `public/images/site/` — four hero assets committed (were untracked)
+- `src/lib/supabase/applications.ts` — **new**; `fetchApplications()` /
+  `fetchApplicationByReference()`, the only place Supabase queries for application
+  data live now.
+- `src/components/RegisterStatus.tsx` — **new**; shared loading/error placeholder for
+  the two register views.
+- `src/components/admin/AdminDashboard.tsx`, `src/components/UserPortalView.tsx` —
+  rewired to `fetchApplications()`.
+- `src/components/ApplicationDetail.tsx` — `useApplications` calls replaced with
+  `onStageChange`/`onAddNote` callback props; zero visual/DOM change.
+- `src/components/admin/AdminApplicationView.tsx` — rewired to
+  `fetchApplicationByReference()`; owns the local-only edit-state shim.
+- `src/components/UserApplicationView.tsx` — rewired to `fetchApplicationByReference()`.
+- `src/app/admin/applications/[id]/page.tsx`, `src/app/portal/applications/[id]/page.tsx`
+  — dropped `generateStaticParams` (was sourced from stale mock data); both routes now
+  render dynamically (confirmed via `npm run build`'s route table).
+- `supabase/seed-domain.mjs` — documents now get staggered `created_at` values so
+  `ORDER BY created_at` reproduces their original (non-chronological) display order.
+  **You already re-ran this seed** — confirmed by the document-order check above.
 
 ## Decisions made
-- Split the treatment exactly as briefed: verified by measurement, not assumption — I sampled each asset's luminance/saturation and rendered the pipeline offline to look at it before shipping. The login art is already palette-native (0.09 luminance); running it through the photo filter would have crushed it for nothing
-- Source photos are only ~420px wide, so they're used as **masked accent panels**, never full-bleed banners — at these render sizes there's no upscaling softness, and the heavy duotone reads as atmosphere rather than a stretched photo
-- The browser pane can't produce screenshots in this environment (its page reports `visibilityState: hidden`, so capture never gets a frame). Rather than ship the treatment unseen, I re-implemented the exact CSS pipeline (grayscale → contrast → brightness → W3C `mix-blend-color` SetLum → Void wash) offline with sharp and inspected the output images
-- Kept the "AU + PH" company framing on the login screen: AGV operates in both regions regardless of the current caseload, which is now all Sydney
+- **RLS does the filtering now, not client code.** `fetchApplications()` runs the
+  identical query for every account; Postgres decides what comes back. The old
+  `visibleApplicationsFor`/`isApplicationVisible` client-side checks are gone from
+  every rewired file.
+- **Admin edits stay session-local, not real writes, for this slice** — removing the
+  status-change/add-note controls would have been a Phase 16 regression, but writing
+  to Supabase is explicitly 10b-3's job. A refresh discards the edit; this is the
+  honest interim behavior, not a bug.
+- **`/admin/access` (`AccessMatrix.tsx`) and `AppShell.tsx`'s "Reset demo data" button
+  are deliberately untouched** — they still operate correctly on the mock store, which
+  remains the right backing for that still-mock-backed page until 10b-3 rewires it too.
+- **`.ilike()` escaping added** (final-review finding) so a stray `%`/`_` in a URL
+  can't match multiple rows and surface a generic error instead of the correct
+  not-found/blocked state.
 
 ## Known issues / TODO
-- Unused analytics/table components still retained in `src/components/admin/` (from the earlier gallery re-scope)
-- Turbopack AVIF build warning (cosmetic; runtime verified correct) — carried over
-- Reduced-motion pass in a real browser still pending (the code paths exist and are wired to `prefers-reduced-motion`)
+- Two Minor final-review findings left as-is (both explicitly framed as non-blocking):
+  the stage-change shim's missing same-stage no-op guard (unreachable via a native
+  `<select onChange>`), and light markup duplication between the two detail views'
+  loading/error states (intentional per the plan, flagged as a 10b-3 consolidation
+  candidate).
+- QuickSwitch same-route refetch: code-verified only, not click-tested this session —
+  see the Known limitation note above. Worth a real click-through next time the
+  Browser pane is compositing normally.
+- Carry-overs from 10b-1: `StatusChip` `TIER_DOT` dead export; Turbopack AVIF logo
+  warning.
 
 ## Blocked on / needs a decision
-- none
+- Nothing blocking. For 10b-3: you'll create a Supabase **Storage bucket** (dashboard)
+  — I'll specify name + policies exactly when we get there.
+- Carried forward, still open, non-blocking: Supabase region (Singapore, pending LGU
+  IT's data-residency call), dev seed password.
 
 ## Next step
-- Nothing outstanding — the demo is feature-complete. Optional future work: Supabase/realtime migration, the motion/a11y polish pass, and deleting the retained unused analytics components.
+**10b-3**: writes (status change, add-note) against real Supabase tables, replacing
+this slice's local-only shim; the `/admin/access` UI changes from a checkbox-toggle to
+explicit grant/revoke actions matching `agv_application_access`'s lifecycle-record
+shape; real Supabase Storage bucket + upload/list/download.
