@@ -1,49 +1,84 @@
 "use client";
 
-// The portal home for a normal user: a gallery of only the applications
+// The portal home for a normal user: a register of only the applications
 // they've been granted access to (admins never reach /portal — the shell
-// routes them to /admin). Reuses the shared ApplicationGallery.
+// routes them to /admin). Shares ApplicationRegister with the admin view.
+// Phase 10b-2 — reads real Supabase data; RLS (10b-1) already restricts the
+// rows to whatever this account holds a live grant for, so there's no
+// client-side visibility filtering here anymore.
 
-import ApplicationGallery from "@/components/ApplicationGallery";
-import TopoField from "@/components/TopoField";
-import {
-  useApplications,
-  visibleApplicationsFor,
-} from "@/lib/applications";
+import { useEffect, useState } from "react";
+import ApplicationRegister from "@/components/ApplicationRegister";
+import RegisterStatus from "@/components/RegisterStatus";
+import { fetchApplications } from "@/lib/supabase/applications";
 import { useSession } from "@/lib/session";
+import type { Application } from "@/lib/mock-data";
+
+type LoadState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; applications: Application[] };
 
 export default function UserPortalView() {
-  const account = useSession((s) => s.account);
-  const applications = useApplications((s) => s.applications);
-  const users = useApplications((s) => s.users);
+  const accountId = useSession((s) => s.account?.id);
+  const [state, setState] = useState<LoadState>({ status: "loading" });
 
-  if (!account) return null;
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: "loading" });
+    fetchApplications()
+      .then((applications) => {
+        if (!cancelled) setState({ status: "ready", applications });
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setState({
+            status: "error",
+            message:
+              e instanceof Error ? e.message : "Something went wrong loading your applications.",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
 
-  const mine = visibleApplicationsFor(account, applications, users);
+  if (state.status === "loading") {
+    return <RegisterStatus eyebrow="Your portal" title="Your applications" kind="loading" />;
+  }
+  if (state.status === "error") {
+    return (
+      <RegisterStatus
+        eyebrow="Your portal"
+        title="Your applications"
+        kind="error"
+        message={state.message}
+      />
+    );
+  }
 
+  const mine = state.applications;
   return (
-    <ApplicationGallery
-      eyebrow="My engagements"
-      eyebrowClass="text-contour"
-      title="My applications"
-      subtitle={`${mine.length} engagement${mine.length === 1 ? "" : "s"} assigned to you — open one to review its status, documents and activity.`}
+    <ApplicationRegister
+      eyebrow="Your portal"
+      title="Your applications"
+      intro={
+        mine.length === 1
+          ? "You have access to 1 application. Select its reference number to review its status, documents, and activity."
+          : `You have access to ${mine.length} applications. Select a reference number to review its status, documents, and activity.`
+      }
       applications={mine}
       hrefBase="/portal/applications"
       emptyState={
-        <div className="relative overflow-hidden rounded-xl border border-dashed border-ash/25 py-20 text-center">
-          <TopoField
-            className="opacity-30"
-            seed={47}
-            peaks={[{ cx: 720, cy: 450, r0: 55, rings: 5, gap: 44 }]}
-          />
-          <div className="relative">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ash">
-              No engagements assigned
-            </p>
-            <p className="mt-2 text-sm text-ash/80">
-              An administrator hasn&apos;t granted you access to any applications yet.
-            </p>
-          </div>
+        <div className="rounded-md border border-dashed border-ash/30 bg-pine/40 px-6 py-16 text-center">
+          <p className="text-label font-semibold uppercase tracking-[0.18em] text-ash">
+            Nothing to show yet
+          </p>
+          <p className="mt-2 text-sm text-ash">
+            You don&apos;t have access to any applications yet. Ask an
+            administrator to grant you access.
+          </p>
         </div>
       }
     />
