@@ -12,9 +12,14 @@
 -- Role rename (data) + widened constraint (schema)
 -- ————————————————————————————————————————————————————————————————
 
+-- Drop the old admin/user-only check FIRST — renaming 'user' to 'staff'
+-- below would otherwise violate it, since 'staff' isn't in the old allowed
+-- list. The final, narrower constraint goes back on only after the rename,
+-- once no row holds 'user' anymore to violate it in turn.
+alter table public.agv_profiles drop constraint if exists agv_profiles_role_check;
+
 update public.agv_profiles set role = 'staff' where role = 'user';
 
-alter table public.agv_profiles drop constraint if exists agv_profiles_role_check;
 alter table public.agv_profiles
   add constraint agv_profiles_role_check check (role in ('admin', 'staff', 'client'));
 
