@@ -1,19 +1,26 @@
 "use client";
 
 // User-facing application detail: renders the shared ApplicationDetail
-// read-only, but only if the signed-in user is allowed to see this
-// application. Otherwise a plain "not available" state — a user can't
-// reach an application outside their visible list by guessing the URL.
+// read-only. Phase 10b-2 fetches the real record from Supabase — RLS (10b-1)
+// already returns null for an application this account has no live grant
+// for, so there's no separate client-side visibility check anymore;
+// "doesn't exist" and "not granted" collapse into the same state on purpose.
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import ApplicationDetail from "@/components/ApplicationDetail";
-import { isApplicationVisible, useApplications } from "@/lib/applications";
+import { fetchApplicationByReference } from "@/lib/supabase/applications";
 import { useSession } from "@/lib/session";
+import type { Application } from "@/lib/mock-data";
+
+type LoadState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "blocked" }
+  | { status: "ready"; app: Application };
 
 export default function UserApplicationView({ id }: { id: string }) {
-  const account = useSession((s) => s.account);
-  const applications = useApplications((s) => s.applications);
-  const users = useApplications((s) => s.users);
+  const accountId = useSession((s) => s.account?.id);
 
   let clean = id;
   try {
@@ -22,10 +29,27 @@ export default function UserApplicationView({ id }: { id: string }) {
     // malformed percent-encoding — falls through to the unavailable state
   }
 
-  const app = applications.find(
-    (a) => a.id.toLowerCase() === clean.toLowerCase()
-  );
-  const allowed = !!account && !!app && isApplicationVisible(account, app.id, users);
+  const [state, setState] = useState<LoadState>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: "loading" });
+    fetchApplicationByReference(clean)
+      .then((app) => {
+        if (cancelled) return;
+        setState(app ? { status: "ready", app } : { status: "blocked" });
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setState({
+          status: "error",
+          message: e instanceof Error ? e.message : "Something went wrong loading this application.",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clean, accountId]);
 
   return (
     <>
@@ -36,9 +60,30 @@ export default function UserApplicationView({ id }: { id: string }) {
         ← Back to your applications
       </Link>
 
-      {allowed && app ? (
+      {state.status === "ready" ? (
         <div className="mt-8">
-          <ApplicationDetail app={app} />
+          <ApplicationDetail app={state.app} />
+        </div>
+      ) : state.status === "loading" ? (
+        <div className="mt-10 max-w-3xl border-y-2 border-bone/80 py-16 text-center">
+          <p
+            role="status"
+            aria-live="polite"
+            className="flex items-center justify-center gap-3 text-sm text-ash"
+          >
+            <span
+              aria-hidden
+              className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ash/25 border-t-signal"
+            />
+            Loading…
+          </p>
+        </div>
+      ) : state.status === "error" ? (
+        <div className="mt-10 max-w-3xl border-y-2 border-bone/80 py-16 text-center">
+          <h1 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+            We couldn&apos;t load this application
+          </h1>
+          <p className="mt-2 text-sm text-ash">{state.message}</p>
         </div>
       ) : (
         <div className="mt-10 max-w-3xl border-y-2 border-bone/80 py-16 text-center">
