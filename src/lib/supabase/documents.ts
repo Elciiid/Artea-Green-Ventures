@@ -39,7 +39,12 @@ export async function uploadDocument(
     .upload(path, file, { upsert: true });
   if (uploadError) throw uploadError;
 
-  const { error: updateError } = await supabase
+  // UPDATE unlike INSERT doesn't throw on an RLS denial — a USING clause
+  // that matches 0 rows just succeeds with an empty result, silently. Ask
+  // for the row back and check it actually came back, rather than trusting
+  // "no error" as proof the metadata write actually happened (the file
+  // itself can upload successfully to Storage even when this fails).
+  const { data: updated, error: updateError } = await supabase
     .from("agv_documents")
     .update({
       storage_path: path,
@@ -48,8 +53,12 @@ export async function uploadDocument(
       uploaded_by: actor,
       uploaded_at: new Date().toISOString(),
     })
-    .eq("id", documentId);
+    .eq("id", documentId)
+    .select("id");
   if (updateError) throw updateError;
+  if (!updated || updated.length === 0) {
+    throw new Error("The file uploaded, but the document record couldn't be updated — you may not have permission.");
+  }
 }
 
 /** A short-lived signed URL for downloading a received document. */
