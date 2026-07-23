@@ -19,11 +19,11 @@ export default function StatusChip({ stage, note }: { stage: Stage; note?: strin
   const tier = TIER_OF_STAGE[stage];
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] ${TIER_TEXT[tier]}`}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-label font-semibold uppercase tracking-[0.1em] ${TIER_TEXT[tier]}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
       {label}
-      {note ? <span className="normal-case text-ash/80">· {note}</span> : null}
+      {note ? <span className="normal-case text-ash">· {note}</span> : null}
     </span>
   );
 }

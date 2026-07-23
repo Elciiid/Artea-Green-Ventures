@@ -22,7 +22,7 @@ export function Wordmark({ hideTagOnMobile = false }: { hideTagOnMobile?: boolea
       />
       <span className={`items-center gap-3 ${hideTagOnMobile ? "hidden sm:flex" : "flex"}`}>
         <span aria-hidden className="h-5 w-px bg-ash/25" />
-        <span className="font-display text-[11px] font-extrabold uppercase tracking-[0.08em] text-bone">
+        <span className="font-display text-label font-extrabold uppercase tracking-[0.08em] text-bone">
           Field Portal
         </span>
       </span>

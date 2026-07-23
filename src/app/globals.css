@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
-/* AGV design tokens — from the approved mood board */
+/* AGV design tokens — from the approved mood board.
+ *
+ * The @theme block holds the DARK palette, which is the default. Light mode
+ * re-points the same variables under [data-theme="light"] further down, so
+ * every existing utility (bg-void, text-bone, border-ash…) themes itself with
+ * no component changes.
+ *
+ * Read the names as ROLES, not literal colors:
+ *   void = page surface · pine = panel surface · bone = primary text
+ *   ash  = secondary text/borders · signal = interactive accent
+ *   contour = resolved/positive · amber = active/in-progress
+ */
 @theme {
   --color-void: #0a0f0c;
   --color-pine: #151f19;
@@ -13,10 +24,66 @@
   --font-display: var(--font-archivo), "Archivo", sans-serif;
   --font-sans: var(--font-inter), "Inter", sans-serif;
   --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+
+  /* Type-size floor. 0.75rem is the smallest step already in the type scale
+     (Tailwind's text-xs), so it's the system's own minimum rather than an
+     arbitrary number. Every uppercase mono label uses this — nothing in the
+     UI is allowed to go below it. Being in rem, it scales with the user's
+     text-size preference. */
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.35;
 }
 
+/* Light is the default register (Phase 16); the blocking script always sets
+   data-theme before paint, so this base only covers the no-JS case. */
 html {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
+}
+
+/* ——— Light theme: "field notebook / blueprint" ———
+ * Not an inversion. Ink on paper, flat contour lines, no glow.
+ * `data-theme` is set to the RESOLVED value ("light"/"dark") by the
+ * blocking script in layout.tsx, before first paint. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-void: #f4f1e8; /* paper — page surface */
+  --color-pine: #eae5d6; /* paper-2 — panel surface */
+  --color-bone: #10140f; /* ink — primary text */
+  --color-ash: #6b6558; /* secondary text/borders (darkened from #7A7568 for AA) */
+  --color-signal: #3c6b12;
+  --color-contour: #1b6b49;
+  --color-amber: #8a5a17; /* darkened from #A9701F for AA on paper */
+}
+
+/* Stepper pulse + elevation are theme-dependent: heavy black shadows and a
+   bright amber glow both read wrong on paper. */
+:root {
+  --pulse-rgb: 232 169 76;
+  --shadow-panel: 0 30px 80px -24px rgb(0 0 0 / 0.7);
+  --shadow-pop: 0 20px 52px -14px rgb(0 0 0 / 0.85);
+}
+
+:root[data-theme="light"] {
+  --pulse-rgb: 138 90 23;
+  --shadow-panel: 0 18px 44px -22px rgb(16 20 15 / 0.2);
+  --shadow-pop: 0 14px 34px -12px rgb(16 20 15 / 0.22);
+}
+
+/* Text-size preference. Scaling the root font size means every rem-based
+   size moves together, including the --text-label floor. */
+:root {
+  font-size: 100%;
+}
+:root[data-text-size="large"] {
+  font-size: 112.5%;
+}
+:root[data-text-size="larger"] {
+  font-size: 125%;
 }
 
 body {
@@ -36,16 +103,102 @@ body {
   outline-offset: 2px;
 }
 
+/* ——— topographic motif ———
+ * Rendered from CSS, not from a JS theme check, so the SVG is identical on
+ * the server and the client (no hydration mismatch). Per-path opacity rides
+ * in on --topo-o; light mode scales it up and drops the glow pass, giving
+ * flat ink contours instead of glowing ones. */
+.topo-line {
+  stroke-opacity: var(--topo-o, 0.2);
+}
+
+:root[data-theme="light"] .topo-line {
+  stroke-opacity: calc(var(--topo-o, 0.2) * 2.4);
+  stroke-width: 1.1;
+}
+
+:root[data-theme="light"] .topo-glow {
+  display: none;
+}
+
+/* ——— site photography ———
+ * Dark: heavy duotone so daylight photos sit in a near-black page.
+ * Light: barely-there wash — the same photo only needs to settle onto paper. */
+.site-photo-img {
+  filter: grayscale(1) contrast(1.25) brightness(0.42);
+}
+
+.site-photo-tint {
+  background: var(--color-contour);
+  opacity: 0.6;
+  mix-blend-mode: color;
+}
+
+.site-photo-wash {
+  background: color-mix(in srgb, var(--color-void) 45%, transparent);
+}
+
+:root[data-theme="light"] .site-photo-img {
+  filter: grayscale(1) contrast(0.95) brightness(1.08);
+}
+
+:root[data-theme="light"] .site-photo-tint {
+  opacity: 0.28;
+}
+
+:root[data-theme="light"] .site-photo-wash {
+  background: color-mix(in srgb, var(--color-void) 30%, transparent);
+}
+
+/* The login hero art is near-black by design, so it can't sit on paper.
+   Light mode hides it and shows contour lines on the bare page instead —
+   which is the light-mode identity anyway. */
+:root[data-theme="light"] .login-hero {
+  display: none;
+}
+
+.login-topo-light {
+  display: none;
+}
+
+:root[data-theme="light"] .login-topo-light {
+  display: block;
+}
+
+/* Skip link — hidden until focused. Written as explicit CSS rather than
+   `sr-only focus:not-sr-only` utilities: in Tailwind v4 the sr-only
+   declarations win the cascade even on focus, so the utility version stays
+   1×1 and invisible when focused (verified in the browser). */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+}
+
+.skip-link:focus-visible,
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.375rem;
+  background: var(--color-signal);
+  color: var(--color-void);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
 /* stepper: pulsing ring on the current stage (Amber) */
 @keyframes step-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(232, 169, 76, 0.4);
+    box-shadow: 0 0 0 0 rgb(var(--pulse-rgb) / 0.4);
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(232, 169, 76, 0);
+    box-shadow: 0 0 0 12px rgb(var(--pulse-rgb) / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(232, 169, 76, 0);
+    box-shadow: 0 0 0 0 rgb(var(--pulse-rgb) / 0);
   }
 }
 
@@ -53,13 +206,29 @@ body {
   animation: step-pulse 2.4s ease-out infinite;
 }
 
+/* Motion preference. The in-app override wins; the OS setting is the
+   fallback, which also covers the pre-hydration frame. `data-motion` is set
+   to the resolved value ("reduced" or "full") by PreferencesEffect. */
 @media (prefers-reduced-motion: reduce) {
-  .step-pulse {
+  :root:not([data-motion="full"]) .step-pulse {
     animation: none;
   }
 }
 
-/* very quiet film grain over everything */
+:root[data-motion="reduced"] .step-pulse {
+  animation: none;
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* very quiet film grain over everything — on paper it reads as tooth */
 .noise {
   position: fixed;
   inset: 0;
@@ -67,4 +236,8 @@ body {
   pointer-events: none;
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="light"] .noise {
+  opacity: 0.035;
 }

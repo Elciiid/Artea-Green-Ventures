@@ -7,13 +7,13 @@
 // - Optional plotter-style draw-in and pointer parallax, both disabled
 //   under prefers-reduced-motion.
 
-import { useEffect, useId, useMemo } from "react";
+import { useEffect, useId, useMemo, type CSSProperties } from "react";
 import {
   motion,
   useMotionValue,
-  useReducedMotion,
   useSpring,
 } from "framer-motion";
+import { useReducedMotionPref } from "@/lib/preferences";
 import { contourPaths, type Peak } from "@/lib/topo";
 
 const DEFAULT_PEAKS: Peak[] = [
@@ -44,7 +44,7 @@ export default function TopoField({
   parallax = false,
   draw = false,
 }: Props) {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotionPref();
   const rawId = useId();
   const glowId = `glow-${rawId.replace(/[^a-zA-Z0-9-]/g, "")}`;
 
@@ -93,15 +93,19 @@ export default function TopoField({
         </defs>
         {layers.map(({ paths, key }) => (
           <g key={key}>
-            {/* soft glow pass under the crisp lines */}
-            <g filter={`url(#${glowId})`} opacity={0.55}>
+            {/* Soft glow pass under the crisp lines. Dark mode only — CSS
+                drops it in light mode, where glow reads as a smudge. */}
+            <g className="topo-glow" filter={`url(#${glowId})`} opacity={0.55}>
               {paths.map((d, i) => (
                 <path
                   key={i}
+                  className="topo-line"
+                  style={
+                    { "--topo-o": ringOpacity(i, paths.length) } as CSSProperties
+                  }
                   d={d}
                   stroke="var(--color-contour)"
                   strokeWidth={1.8}
-                  opacity={ringOpacity(i, paths.length)}
                 />
               ))}
             </g>
@@ -113,14 +117,20 @@ export default function TopoField({
                   : "var(--color-contour)";
                 const opacity =
                   ringOpacity(i, paths.length) * (isIndex ? 1.9 : 1);
+                // Opacity rides on a custom property so CSS owns it per
+                // theme; the draw-in animates pathLength only, which would
+                // otherwise fight the themed stroke-opacity.
+                const styleVars = { "--topo-o": opacity } as CSSProperties;
                 return animateDraw ? (
                   <motion.path
                     key={i}
+                    className="topo-line"
+                    style={styleVars}
                     d={d}
                     stroke={stroke}
                     strokeWidth={isIndex ? 1.4 : 1}
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity }}
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
                     transition={{
                       duration: 1.6,
                       delay: 0.2 + i * 0.09 + key * 0.25,
@@ -130,10 +140,11 @@ export default function TopoField({
                 ) : (
                   <path
                     key={i}
+                    className="topo-line"
+                    style={styleVars}
                     d={d}
                     stroke={stroke}
                     strokeWidth={isIndex ? 1.4 : 1}
-                    opacity={opacity}
                   />
                 );
               })}
