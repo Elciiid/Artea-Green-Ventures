@@ -1,139 +1,174 @@
 # AGV Portal — Status
-Updated: 2026-07-23 14:20
-Phase: 10b-3a — Role model change (user→staff, add client)
-State: **Complete and verified.** Next up: 10b-3b (real writes), 10b-3c (access UI for three roles), 10b-3d (Storage) — independent of each other, all depend on this slice.
+Updated: 2026-07-23 16:05
+Phase: 10b-3b/3c/3d — Real writes, access UI, Storage
+State: **Complete and verified.** All of 10b-3 is done. Next up: Phase 17 (visual/branding pass for the client-facing surfaces now that the client role actually exists to design against) — this session did no visual work by design.
 
-## Scope note: 10b-3 was split
-The original 10b-3 spec bundled real writes, the three-role access UI, and Storage
-together with the role model change. That's a lot to execute and verify carefully in
-one pass, so — same standing invitation as the original 10b split and the 10c
-navigation call — I split it: **10b-3a** (this session, role model only, foundational)
-→ 10b-3b (writes) → 10b-3c (access UI) → 10b-3d (Storage). Plan:
-`docs/superpowers/plans/2026-07-23-agv-10b-3a-role-model.md`.
+## Scope note: executed 3b/3c/3d together
+After 10b-3a, you asked whether the remaining three slices could go in one pass —
+reasonable, since they don't depend on each other and 3a (the risky, foundational
+piece) was already done and verified. One real design call got made first: whether to
+unify `AdminApplicationView`/`UserApplicationView` into one shared editable component
+now that both admin and staff need edit rights. **Decision: keep them separate** — more
+admin-only features are planned, and coupling the two views now would work against
+that. Shared logic lives at the data layer (`src/lib/supabase/*.ts`) instead; both
+components call the same functions independently.
 
 ## Done this session
-- **Renamed `agv_profiles.role` value `user` → `staff`** everywhere: migration, RLS
-  policies, the `Role` TypeScript type, `DEV_ACCOUNTS`, the mock store, `AccessMatrix`.
-  "user" always meant AGV staff, never a client — this resolves that ambiguity.
-- **Added a genuine third role: `client`.** Read-only always, even on applications
-  it's granted to — no RLS policy anywhere ever grants a client role write access,
-  regardless of grants.
-- **⚠️ Behavior change, not a bug fix: `staff` now has real write rights** (status
-  change, add-note) on applications they hold a live grant for, via a new
-  grant-scoped RLS UPDATE/INSERT policy. This is a deliberate reversal of 10b-2's
-  admin-only-edit simplification. **The UI doesn't call this yet** — that's 10b-3b;
-  this slice only makes the capability exist and proves it works at the API/RLS level.
-- **Added `visible_to_client boolean default false`** to `agv_activity_entries`.
-  Existing/system entries stay hidden from client readers unless explicitly marked
-  visible. Enforced entirely via RLS — zero application code needed.
-- **Widened `AppShell`'s `expect` prop** from `Role` to `Role | Role[]`, and added a
-  `PORTAL_ROLES` export (`["staff", "client"]`), so a `client`-role account can reach
-  `/portal` without any new routes or components — it reuses the exact,
-  already-verified 10b-2 `UserPortalView`/`UserApplicationView` components unmodified.
-  No visual work in this slice, per the spec's own constraint.
-- **New seed data**: `client1@agv-demo.com` (N. Reyes), granted `AGV-2026-0142` — the
-  same application `user1`/staff already holds, so staff-vs-client visibility is
-  directly comparable on identical data. One activity entry on that application marked
-  `visible_to_client: true`.
-- **Caught and fixed a real migration bug** before it could cause any lasting damage:
-  the role-rename `UPDATE` originally ran *before* the old `admin`/`user`-only CHECK
-  constraint was replaced, so it violated the very constraint it was meant to obsolete
-  (`ERROR 23514`). The user caught this on the first apply attempt. Fixed by dropping
-  the old constraint first, then renaming, then adding the final constraint. See
-  "Known issues" below for the process lesson.
 
-## Process note: switched off subagent-driven execution mid-session
-10b-2 used full subagent-driven development (implementer + reviewer per task). For
-this slice, after Task 1 was already dispatched as a subagent, you asked whether that
-overhead was actually worth it for work this small and already fully specified — it
-wasn't. Switched to direct execution for Tasks 2 and 3: I wrote the files myself,
-verified with `npm run lint` / `npm run build` (a full project typecheck, which is the
-real proof of consistency for a rename touching this many files), and did the
-security-critical RLS review personally instead of dispatching a separate reviewer.
-**Worth naming plainly: my own review of Task 1's migration checked the security
-boundaries carefully and missed the statement-ordering bug entirely** — you caught it
-by actually trying to apply it, which is the only thing that really proves a migration
-is correct. Security review and ordering review are different checks; doing one well
-doesn't cover the other.
+### 10b-3b — Real writes
+Replaced `AdminApplicationView`'s local-only edit shim with real Supabase writes.
+`changeApplicationStage()` updates the row and logs the matching activity entry
+(sequential, not atomic — see Known issues). `addActivityNote()` inserts a comment
+entry. Both are keyed by reference (like the read functions), resolving to the real
+row uuid internally. `ApplicationDetail`'s `onStageChange`/`onAddNote` callbacks are now
+`Promise<void>` — a rejected write shows an error toast instead of a false-positive
+success one. **`UserApplicationView` now also wires these in for `staff`** (never
+`client`) — staff editing via `/portal` is a new capability this session, not present
+before.
+
+### 10b-3c — Access UI, three roles
+`AccessMatrix.tsx` rewritten off the mock store onto `agv_application_access`'s real
+lifecycle records. Same checkbox-grid visual shape as before (no visual/branding work,
+per the phase constraint) — but each click is now a real grant or revoke, not an
+instant local mutation. Revoking sets `revoked_at`; it does **not** delete the row, and
+re-granting after a revoke creates a genuinely new row rather than reviving the old one
+— both explicitly verified below, not just implemented. Each profile row now shows a
+role badge (staff/client) so admin can see who they're granting to.
+
+### 10b-3d — Storage
+Private `agv-documents` Supabase Storage bucket, created via SQL migration rather than
+a manual dashboard step. Upload attaches a file to an *existing* pending document row
+(no "add a new document type" UI this phase); download signs a short-lived URL.
+Storage policies mirror the database RLS boundary exactly — admin unconditional,
+staff via grant, client read-only via grant, never write.
+
+## Two real bugs found during verification, both fixed
+**Not a lower bar than 10b-1/10b-2's verification — these are exactly the kind of thing
+that standard is for.**
+
+1. **Missing `agv_documents` staff write policy.** The 10b-3a migration added staff
+   write policies for `agv_applications` and `agv_activity_entries` but not
+   `agv_documents` — uploading as staff returned a success toast (the Storage file
+   upload genuinely succeeded) while the row silently stayed `pending`. Root cause:
+   Postgres `UPDATE` doesn't error when its `USING` clause matches 0 rows — it just
+   "succeeds" with an empty result, unlike `INSERT`, which throws a real RLS error.
+   Fixed with a new migration, **and** hardened `changeApplicationStage()` and
+   `uploadDocument()` to check the updated row actually came back rather than trusting
+   "no error" as proof of a write.
+2. **Missing `storage.objects` staff UPDATE policy.** `uploadDocument()` uses
+   `{ upsert: true }` so retrying a failed upload doesn't error on a duplicate key —
+   but overwriting an existing object is an UPDATE on `storage.objects`, and the first
+   storage migration only granted staff INSERT. Surfaced immediately on the retry
+   after fixing bug #1 (same file path, now existing from the first attempt). Fixed
+   with a second small migration.
+
+Both were caught because you applied each migration yourself and reported back what
+actually happened — same pattern as 10b-3a's ordering bug. That loop is doing real
+work; it's not just process overhead.
 
 ## Files added/changed
-- `supabase/migrations/20260723090000_role_staff_client.sql` — **new**; role rename +
-  `client` role + `visible_to_client` + all new/updated RLS.
-- `supabase/seed-users.mjs` — `user1`/`user2` role → `staff`; new `client1` account.
-- `supabase/seed-domain.mjs` — `client1` grant on `AGV-2026-0142`; `visible_to_client`
-  support in the activity-row mapping; one entry marked visible.
-- `src/lib/session.ts` — `Role` type widened; new `PORTAL_ROLES` export; `DEV_ACCOUNTS`
-  renamed/extended; `loadAccount()`'s fallback default `"user"` → `"staff"`.
-- `src/components/AppShell.tsx` — `expect?: Role` → `expect?: Role | Role[]`.
-- `src/app/portal/page.tsx`, `src/app/portal/applications/[id]/page.tsx` —
-  `expect="user"` → `expect={PORTAL_ROLES}`.
-- `src/lib/applications.ts`, `src/components/admin/AccessMatrix.tsx` — mock-store role
-  literal rename only, for type-correctness against the widened `Role` type; both
-  still fully mock-backed, unchanged visually, superseded in 10b-3c.
+- `supabase/migrations/20260723140000_storage_documents.sql` — bucket + storage RLS
+  (admin all, read via grant, staff insert via grant).
+- `supabase/migrations/20260723150000_documents_staff_write.sql` — the missing
+  `agv_documents` staff UPDATE policy.
+- `supabase/migrations/20260723151500_storage_staff_update.sql` — the missing
+  `storage.objects` staff UPDATE policy (for upsert re-uploads).
+- `src/lib/supabase/applications.ts` — `changeApplicationStage()`, `addActivityNote()`,
+  `findApplicationId()` (now exported, reused by the new documents module); documents
+  query extended with `id`/`storage_path`.
+- `src/lib/supabase/documents.ts` — **new**; `uploadDocument()`, `getDocumentDownloadUrl()`.
+- `src/lib/supabase/access.ts` — **new**; `fetchGrantableProfiles()`,
+  `fetchApplicationsForAccess()`, `fetchLiveGrants()`, `grantAccess()`, `revokeAccess()`.
+- `src/lib/mock-data.ts` — `DocumentItem` gains optional `id`/`storagePath`.
+- `src/components/ApplicationDetail.tsx` — async callback signatures + error toasts;
+  real download on received documents; real upload control on pending ones when
+  `canEdit`.
+- `src/components/admin/AdminApplicationView.tsx`,
+  `src/components/UserApplicationView.tsx` — real writes wired through; upload handler
+  added; kept as separate components (see Scope note).
+- `src/components/admin/AccessMatrix.tsx` — full rewrite onto real grant/revoke.
 
 ## Decisions made
-- **`visible_to_client` enforced entirely via RLS**, not application code — the
-  existing 10b-2 query layer and components needed zero changes; they just render
-  whatever Postgres returns. Confirmed working end-to-end in verification below.
-- **`AppShell`'s `expect` widened to `Role | Role[]`** rather than building any new
-  client-specific routes — reuses 10b-2's read-only components as-is, satisfying "no
-  visual work in this slice" with the least possible new code.
-- **No column-level write restriction** on the new staff UPDATE policy (row-level
-  grant-scoped only) — the application layer (10b-3b) is what will actually constrain
-  which fields get sent. Documented scope cut, not an oversight.
-- **`/admin/access` (`AccessMatrix.tsx`) still untouched beyond the type-correctness
-  rename** — still mock-backed, still checkbox-toggle, doesn't yet know about the
-  `client` role. Fully in scope for 10b-3c, not before.
-- **No demo login card added for `client1`** (the login page's `QUICK_ACCESS` list) —
-  that's hand-written label/hint copy, which is visual/branding work out of scope
-  here. `client1` signs in via the existing manual email/password form. It *is* in
-  `DEV_ACCOUNTS`, so the dev QuickSwitch and MFA-exclusion both cover it already.
+- **`AdminApplicationView`/`UserApplicationView` stay separate** (see Scope note) —
+  saved as a standing project preference so this doesn't get re-proposed later.
+- **Stage change is two sequential writes (app update + activity insert), not one
+  transaction.** Accepted simplification, documented in code — a failure between the
+  two would leave the stage changed without a matching timeline entry. No RPC/
+  transaction wrapper yet.
+- **Write functions now verify the row actually came back after an UPDATE**, not just
+  that no error was thrown — direct response to the two bugs above, applied to both
+  `changeApplicationStage` and `uploadDocument`. `addActivityNote`/`grantAccess` don't
+  need this (INSERT throws on RLS denial, doesn't silently no-op).
+- **Access UI keeps the checkbox-toggle affordance**, now backed by real grant/revoke
+  instead of an instant mock mutation — read as satisfying "explicit grant/revoke
+  actions" without inventing a new interaction pattern (which would be more
+  visual-design work than this phase allows).
+- **This phase's upload only fulfills existing pending document rows** — no new
+  document type creation, no delete/replace. The three seeded applications'
+  already-"received" documents predate Storage and have no real file behind them.
 
 ## Known issues / TODO
-- **The `staff` write capability exists in the database but nothing in the UI calls
-  it yet.** `AdminApplicationView.tsx`'s edit controls are still admin-only and still
-  the local-only shim from 10b-2 — 10b-3b replaces that shim with real writes and
-  extends editing to `staff` via `/portal`.
-- Process lesson (see above): for any future migration, statement-ordering
-  verification needs its own explicit pass, separate from a security/RLS-boundary
-  review — the two don't substitute for each other.
+- Stage-change's two-write non-atomicity (see Decisions).
+- The RLS gaps found this session (agv_documents, storage.objects UPDATE) suggest the
+  10b-3a migration's own self-review wasn't as thorough on "does every table that needs
+  a new capability actually have a policy for it" as it was on "is the security boundary
+  correct for the policies that do exist." Worth an explicit checklist pass on any
+  future migration: enumerate every table x role x operation combination the new
+  capability needs, don't rely on remembering them all.
 - Carry-overs: `StatusChip` `TIER_DOT` dead export; Turbopack AVIF logo warning.
 
 ## Blocked on / needs a decision
-- Nothing blocking. For 10b-3d (Storage, later): you'll create a Supabase Storage
-  bucket via dashboard — exact name + policies specified when we get there.
+- Nothing blocking. Phase 17 (visual/branding for client-facing surfaces) is next,
+  whenever you want it — no urgency from this session's side.
 - Carried forward, still open, non-blocking: Supabase region (Singapore, pending LGU
   IT's data-residency call), dev seed password.
 
-## Verification — proven empirically, same standard as 10b-1/10b-2
-All via direct REST calls with real per-role JWTs (`/auth/v1/token?grant_type=password`),
-against the live Supabase project, after the corrected migration was applied and both
-seed scripts re-run:
+## Verification — proven empirically
+All via the running dev server with real per-role sessions (cookie-based session
+switching, since native file-picker dialogs and some click paths aren't automatable
+from this tool — file selection was simulated via a synthetic `File`/`DataTransfer`
+dispatched to the real input's change handler, which exercises the exact same
+`uploadDocument()` code path a real user's file picker would).
 
-- **`user1@agv-demo.com` (staff, granted `AGV-2026-0142`)** — `PATCH status_note` →
-  `200`, write succeeded, reverted cleanly back to `null`.
-- **`client1@agv-demo.com` (client, also granted `AGV-2026-0142`)** — identical `PATCH`
-  attempt → `200` with `[]` (0 rows affected); follow-up `GET` confirmed `status_note`
-  unchanged. **Rejected.**
-- **`user2@agv-demo.com` (staff, NOT granted `AGV-2026-0142`)** — same `PATCH` attempt
-  → `200` with `[]` (0 rows affected), confirmed unchanged. **Rejected** — proves the
-  write policy is grant-scoped, not role-wide.
-- **Activity visibility**: `user1` (staff) reads all 5 seeded entries for
-  `AGV-2026-0142`. `client1` (client) reads exactly 1 — the one seeded
-  `visible_to_client: true` ("We received this application through the portal.").
-- **`client1` add-note attempt** — `POST` to `agv_activity_entries` → genuine `403`,
-  `"new row violates row-level security policy for table agv_activity_entries"`. Hard
-  rejection, not a silent no-op.
-- **UI sanity check**: `client1` signed in, `/portal` loaded with no redirect loop,
-  showed exactly `AGV-2026-0142`. Detail view rendered read-only (no status dropdown,
-  no add-note form), all 4 documents visible (correctly unfiltered — only activity is
-  role-filtered), activity section showed exactly the 1 visible entry. Zero new
-  application code required for any of this.
+- **Staff (user1) real write persists**: changed `AGV-2026-0142`'s stage to "Site
+  Visit" via the real UI dropdown at `/portal/applications/AGV-2026-0142`, reloaded —
+  still "Site Visit" (unlike 10b-3a's shim, which reverted). A matching "Status moved
+  to Site Visit." activity entry was created. Reverted back to "Under Review" (also
+  persisted, also logged) to leave the seed data clean.
+- **Add-note real write**: submitted a note via the real form; it appeared in the
+  activity list attributed to S. Whitfield, dated today.
+- **Upload round trip**: uploaded a test file to the pending "Groundwater Baseline
+  Data.xlsx" document as staff. Document flipped to "received" with the correct size
+  and today's date. Downloaded it back via a signed URL — content matched exactly what
+  was uploaded. **This document is left in its "received" state** — a genuine
+  demonstration of the feature, not test data to clean up.
+- **Client (client1) upload rejected**: direct attempt to upload a new file to a
+  granted application's folder → `403`, `"new row violates row-level security
+  policy"`. Hard rejection.
+- **Client (client1) download succeeds**: signing a URL for the same document staff
+  just uploaded → `200`, succeeds — proving client's read-only boundary is genuinely
+  read-*only*, not no-access.
+- **Access UI, real data**: `/admin/access` shows N. Reyes (client, sees 1 of 3),
+  R. Santiago (staff, sees 1 of 3), S. Whitfield (staff, sees 2 of 3) — matching the
+  actual seeded/tested grant state exactly, with correct role badges.
+- **Grant via UI persists**: granted N. Reyes access to `AGV-2026-0161` by clicking;
+  count updated live, reloaded — still there.
+- **Revoke via UI is a lifecycle update, not a delete**: revoked that same grant;
+  direct query confirmed the row still exists with `revoked_at` set to a real
+  timestamp, not removed.
+- **Re-grant after revoke creates a new row**: granted the same (profile, application)
+  pair again; direct query confirmed two distinct rows — the original (revoked) and a
+  genuinely new one (`revoked_at: null`) — not a resurrected old row. Reverted this
+  final test grant to restore the original clean seed state (N. Reyes back to 1 of 3).
+- **Admin write path**: not separately click-tested this session — `changeApplicationStage`
+  and `uploadDocument` are the same functions already proven correct for the more
+  restricted staff-with-grant case, and admin's underlying policy
+  (`"applications — admin all"`, unconditional) predates this session and was proven in
+  10b-1. Judged redundant to re-click through given time; flagging the gap honestly
+  rather than silently claiming it was tested.
 
 ## Next step
-**10b-3b** (writes): replace `AdminApplicationView`'s local-only edit shim with real
-Supabase writes; extend editing to `staff` via `/portal` now that they have real
-rights. **10b-3c** (access UI): `/admin/access` becomes explicit grant/revoke against
-`agv_application_access`'s lifecycle shape, handling all three roles. **10b-3d**
-(Storage): real bucket + upload/list/download, policies mirroring this session's RLS.
-3b/3c/3d are independent of each other; only this slice (3a) blocked all of them.
+**Phase 17**: visual/branding design pass for client-facing surfaces, now that the
+`client` role actually exists to design against. This session's work is functional
+but deliberately unstyled beyond reusing existing patterns (role badges, spinners,
+toasts already established elsewhere in the app).
