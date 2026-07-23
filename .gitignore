@@ -10,8 +10,9 @@
 *.pem
 *.tsbuildinfo
 
-# env
+# env — all real env files ignored; the committed template is the exception
 .env*
+!.env.example
 
 # vercel
 .vercel
