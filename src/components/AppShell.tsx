@@ -58,6 +58,17 @@ const ACCOUNT_ITEM: NavItem = {
   match: (p) => p.startsWith("/account"),
 };
 
+// Phase 18: Home is the new primary destination for admin/staff, with
+// Applications (the Records group below) demoted to secondary. Client is
+// untouched — "client gets no Home hub at all" is a locked decision, so this
+// item is only ever rendered for the other two roles (see the `role !==
+// "client"` check where it's used below).
+const HOME_ITEM: NavItem = {
+  href: "/home",
+  label: "Home",
+  match: (p) => p === "/home" || p.startsWith("/home/"),
+};
+
 export default function AppShell({
   expect,
   children,
@@ -111,7 +122,7 @@ export default function AppShell({
             aria-hidden
             className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ash/25 border-t-signal"
           />
-          Loading AGV Portal…
+          Loading AGV Home…
         </p>
       </div>
     );
@@ -151,6 +162,9 @@ export default function AppShell({
         </div>
 
         <nav aria-label="Primary" className="flex flex-col gap-0.5 px-3">
+          {account.role !== "client" && (
+            <SideLink item={HOME_ITEM} active={HOME_ITEM.match(pathname)} />
+          )}
           <SideGroupLabel>Records</SideGroupLabel>
           {nav.map((item) => (
             <SideLink key={item.href} item={item} active={item.match(pathname)} />

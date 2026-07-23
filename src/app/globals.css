@@ -32,6 +32,23 @@
      text-size preference. */
   --text-label: 0.75rem;
   --text-label--line-height: 1.35;
+
+  /* ——— Home hub palette (Phase 18) ———
+   * A second, FIXED palette — not theme-reactive like the tracker's void/
+   * pine/signal tokens above. Scoped by convention (only Home components use
+   * these) rather than by CSS nesting, and deliberately doesn't respond to
+   * data-theme: arteagreenventures.com, which this tone is drawn from, has
+   * no dark mode either, and building one was out of this phase's timebox.
+   * AppShell's shared chrome (sidebar/header/footer) around Home pages is
+   * untouched and keeps following the tracker's normal light/dark tokens —
+   * only the Home/announcements/directory/resources content area uses these. */
+  --color-home-cream: #f7f3e9;
+  --color-home-panel: #ffffff;
+  --color-home-ink: #1e2a1f;
+  --color-home-muted: #6b7264;
+  --color-home-sage: #2f7040;
+  --color-home-sage-deep: #234f30;
+  --color-home-border: #e4dcc8;
 }
 
 /* Light is the default register (Phase 16); the blocking script always sets

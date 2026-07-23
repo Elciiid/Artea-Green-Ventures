@@ -8,6 +8,7 @@
 // non-admins — the access boundary is enforced by Postgres, not this code.
 
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { assertRowReturned } from "@/lib/supabase/assert-write";
 import { PIPELINE, type Application, type DocumentItem, type TimelineEntry, type Stage } from "@/lib/mock-data";
 
 type ApplicationRow = {
@@ -193,19 +194,13 @@ export async function changeApplicationStage(
   const applicationId = await findApplicationId(reference);
   if (!applicationId) throw new Error(`${reference} not found or not accessible.`);
 
-  // UPDATE unlike INSERT doesn't throw on an RLS denial — a USING clause
-  // that matches 0 rows just succeeds with an empty result, silently. Ask
-  // for the row back and check it actually came back, rather than trusting
-  // "no error" as proof of a real write.
   const { data: updated, error: updateError } = await supabase
     .from("agv_applications")
     .update({ stage, status_note: null })
     .eq("id", applicationId)
     .select("id");
   if (updateError) throw updateError;
-  if (!updated || updated.length === 0) {
-    throw new Error("The status change didn't save — you may not have permission to edit this application.");
-  }
+  assertRowReturned(updated, "The status change didn't save — you may not have permission to edit this application.");
 
   const label = PIPELINE.find((p) => p.id === stage)?.label ?? stage;
   const { error: activityError } = await supabase.from("agv_activity_entries").insert({

@@ -20,8 +20,14 @@ export type Account = {
   organizationId: string;
 };
 
+/**
+ * Post-login landing. Phase 18: admin/staff default to the new Home hub;
+ * client is untouched (Applications stays their home — "client gets no Home
+ * hub at all" is a locked decision, not an oversight).
+ */
 export function roleHome(role: Role): string {
-  return role === "admin" ? "/admin" : "/portal";
+  if (role === "client") return "/portal";
+  return "/home";
 }
 
 /**

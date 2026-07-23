@@ -36,8 +36,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "AGV Field Portal",
-    template: "%s · AGV Field Portal",
+    default: "AGV Home",
+    template: "%s · AGV Home",
   },
   description:
     "Track environmental approvals for Artea Green Ventures, from the first submission to the final report.",

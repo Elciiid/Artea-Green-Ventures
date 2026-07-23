@@ -7,6 +7,7 @@
 // this module doesn't decide who can upload or download, Postgres does.
 
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { assertRowReturned } from "@/lib/supabase/assert-write";
 import { findApplicationId } from "@/lib/supabase/applications";
 
 const BUCKET = "agv-documents";
@@ -39,11 +40,9 @@ export async function uploadDocument(
     .upload(path, file, { upsert: true });
   if (uploadError) throw uploadError;
 
-  // UPDATE unlike INSERT doesn't throw on an RLS denial — a USING clause
-  // that matches 0 rows just succeeds with an empty result, silently. Ask
-  // for the row back and check it actually came back, rather than trusting
-  // "no error" as proof the metadata write actually happened (the file
-  // itself can upload successfully to Storage even when this fails).
+  // The file itself can upload successfully to Storage even when this
+  // metadata write fails, so this check still matters even though the
+  // upload above already succeeded — see assertRowReturned's doc comment.
   const { data: updated, error: updateError } = await supabase
     .from("agv_documents")
     .update({
@@ -56,9 +55,7 @@ export async function uploadDocument(
     .eq("id", documentId)
     .select("id");
   if (updateError) throw updateError;
-  if (!updated || updated.length === 0) {
-    throw new Error("The file uploaded, but the document record couldn't be updated — you may not have permission.");
-  }
+  assertRowReturned(updated, "The file uploaded, but the document record couldn't be updated — you may not have permission.");
 }
 
 /** A short-lived signed URL for downloading a received document. */
