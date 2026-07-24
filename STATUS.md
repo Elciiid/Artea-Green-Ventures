@@ -1,45 +1,48 @@
 # AGV Portal — Status
 Updated: 2026-07-24
-Phase: Onboarding model — self-serve signup, domain-branched staff/client
-State: Complete — code, build, lint, and every empirical check in this session's brief all pass. No open blockers.
+Phase: Auth hardening — OAuth, CAPTCHA, rate limits, headers
+State: In progress. Split into three batches given how much of this depends on external, user-only setup (Azure/Google console work, Supabase dashboard toggles). **Batch A (security headers, dependency audit, rate-limit recommendations) is complete.** Batch B (Turnstile CAPTCHA) is waiting on a site key from you. Batch C (Azure/Google OAuth) is waiting on your app registrations.
 
-## Done this session
-Started as an admin-invite-only client model (per an earlier brief), then pivoted mid-build after a real incident: Supabase emailed a bounce-rate warning on this project, caused by my own test signups using fabricated addresses at `arteagreenventures.com` during verification. Rather than build a client flow that still depends on Supabase's default mailer at any real volume, the model is now:
+## Done this session (Batch A)
 
-- **Staff** (`@arteagreenventures.com` email) — self-signup at `/signup`, unchanged from before: a real `signUp()` call, Supabase sends its usual verification link, role defaults to `staff`.
-- **Clients** (any other email) — self-signup at the *same* `/signup` form. The route creates the account via the Admin API (`auth.admin.createUser({ email_confirm: true, ... })`), which marks the account already-verified **without Supabase ever attempting to send anything** — confirmed via Supabase's own docs before relying on it, not assumed. This path structurally cannot bounce, regardless of whether the email is real. Clients still start with **zero application access** — an admin grants it afterward via the existing `/admin/access` page, unchanged.
+**Security headers**, added at the Next.js `next.config.ts` layer via `headers()` — applies to every route:
+- `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
+- Deliberately used the plain `headers()` approach rather than Next's nonce-based CSP pattern (`proxy.ts` in Next 16 — the renamed `middleware.ts`) — nonces require **every page** in the app to opt into dynamic rendering just to carry the header, which would mean touching nearly every route and giving up static optimization app-wide. That's a much bigger, more invasive change than "add security headers," and this project's standing rule is to preserve everything else untouched.
+- Trade-off, disclosed rather than silent: `script-src`/`style-src` both need `'unsafe-inline'` under this approach (style-src needs it regardless, for Framer Motion's runtime inline styles, independent of the nonce question).
+- `challenges.cloudflare.com` is pre-allowed in `script-src`/`connect-src`/`frame-src` ahead of the still-pending Turnstile integration (Batch B), so this file won't need touching again when that lands.
+- **Verified live**: all 5 headers present via curl; zero CSP violations in the browser console through a real admin sign-in (password auth, redirect, Supabase connectivity); confirmed a Framer Motion inline `style` attribute rendered and applied correctly under this CSP.
 
-**The admin-invite flow built earlier this session (`/api/admin/invite-client`, `/invite/complete`, the "Invite client" button) was fully removed** — deleted, not deprecated, with `AdminApplicationView.tsx` reverted to its pre-invite state. `grep` confirms no dangling references anywhere in `src/`.
+**Dependency audit** (`npm audit`):
+- Found 3 high-severity findings: one in `next` itself, and two nested inside `next`'s own bundled dependencies (`postcss`, `sharp`).
+- Applied the one safe, non-breaking fix available: bumped `next` 16.2.10 → 16.2.11 (within the existing `^16.1.0` range). Rebuilt, re-linted, re-typechecked — all clean.
+- **The remaining 3 findings have no safe fix right now.** `npm audit fix --force` would downgrade to `next@9.3.3` — a pre-App-Router release from years before this app was built, which would break essentially everything. Not applying that. Checked whether this app is actually exposed to the underlying CVEs: most of them target Server Actions, custom servers, SVG-based `next/image` optimization, i18n locale routing, or `rewrites()` — this app uses **none** of those (no `"use server"` anywhere, no custom server, no SVGs through `next/image`, no locale routing, no `rewrites()` in `next.config.ts`). The one that isn't ruled out by feature usage is a generic "cache confusion of response bodies" issue in Next's core request handling. Worth re-running `npm audit` before each future deploy until Next.js ships a stable release with these patched — no action needed today beyond that habit.
 
-**`20260724100000_fix_new_user_default_role.sql` (carried over from the previous session) has now been applied by the user, confirmed successful.** The `agv_handle_new_user()` trigger's role default is fixed at the database level too — belt-and-suspenders alongside both signup branches already passing `role` explicitly.
+**Rate-limit recommendations** (Supabase Dashboard → Authentication → Rate Limits — I can't set these myself, this is what to enter):
 
-**Fully verified, end to end:**
-- `npm run build` and `npm run lint` both pass clean.
-- Validation layer (shared by both branches): malformed JSON, missing fields, and a malformed email shape all correctly rejected with clear messages, before ever calling Supabase — checked live via curl.
-- Staff domain-reject/accept logic was proven earlier this session (before the pivot) with two real `@arteagreenventures.com` signups — see Known issues for the cleanup this left behind.
-- **Rate limiting**, added during review after noticing client-signup uses the `service_role` key and bypasses Supabase's own signup throttling entirely — a real gap, not hypothetical. Added a per-IP limiter (5 attempts / 10 minutes); verified live via curl that the 6th rapid attempt from the same IP gets a 429, not a 500 or a silent pass-through.
-- Try/catch hardening around both branches proved itself: while `SUPABASE_SERVICE_ROLE_KEY` was still missing, the client-signup path failed exactly as designed — a clean `{"error": "Missing SUPABASE_SERVICE_ROLE_KEY..."}` at 500, never a crash or an HTML error page.
-- **Client signup, full path, real evidence**: with the key in place, created a real client account (`browserclienttest.demo@othercompany.example`) via curl, then again through the actual `/signup` UI in the browser. Confirmed via the decoded session cookie: correct email, `role: "client"`, `email_verified: true` — proving the account was created already-verified with no email round-trip. The browser redirected straight to `/portal`, which rendered "You have access to 0 applications... Ask an administrator to grant you access" — the expected zero-access state for a brand-new, ungranted client.
+| Setting | Governs | Current default | Recommended | Why |
+|---|---|---|---|---|
+| Token Requests | Both password sign-in **and** token refresh — they're the same `/auth/v1/token` endpoint, different grant types, not two separate knobs | 1800/hour | **300/hour** | ~6x cut from default. Still comfortable headroom for this app's real scale (background token refresh + normal logins across staff and clients), while meaningfully raising the bar against scripted brute-force sign-in attempts. |
+| MFA Challenge & Verify | TOTP code verification | 15/minute | Leave as-is | A 6-digit TOTP code only stays valid ~30 seconds — that rotation, not the rate limit, is the real defense here. Default is already reasonable; tightening it further has little practical benefit. |
+| Anonymous sign-ins / signup endpoint | Possibly **all** `/auth/v1/signup` traffic, not just Supabase's anonymous-auth feature — email/password `signUp()` (our real staff signup path) hits the same endpoint under the hood | 30/hour | **Check this one in your dashboard before touching it** — genuine ambiguity in Supabase's own docs about whether it's anonymous-only or covers real signups too. Don't drop it below whatever real staff onboarding volume you expect, since it may gate that too. |
+| OTP/magic link, signup confirmation, password reset, "endpoints that trigger email sends" | Anything that sends an email | 30/hr, 60s window, 60s window, **2 emails/hour** | Leave untouched | Out of scope per this pass's hard constraint — the 2-emails/hour cap on the built-in mailer is already the real bottleneck regardless of what these say. |
 
 ## Files added/changed
-- `src/lib/supabase/server.ts` — server-only Supabase clients (anon-scoped-to-caller, and `service_role`).
-- `src/app/api/auth/signup/route.ts` — branches by email domain instead of rejecting non-AGV emails outright; includes the per-IP rate limiter.
-- `src/app/signup/page.tsx` — copy now addresses both audiences; redirects based on the role the route resolved (`staff` → `/home`, `client` → `/portal`).
-- `.env.example` — `SUPABASE_SERVICE_ROLE_KEY` documented as a real runtime var, used by the signup route's client-creation path.
-- Removed: `src/app/api/admin/invite-client/route.ts`, `src/app/invite/complete/page.tsx`, `src/components/admin/InviteClientForm.tsx`. `AdminApplicationView.tsx` reverted to its pre-invite version.
+- `next.config.ts` — security headers via `headers()`.
+- `package-lock.json` — `next` 16.2.10 → 16.2.11 (patch bump, `npm audit fix`).
 
 ## Decisions made
-- **No email verification for clients, by design.** Anyone can register a client account under an email address they don't actually own — there's no proof-of-ownership step. The mitigating control is that a fresh client account has zero application access regardless; an admin must still consciously grant it via `/admin/access`. That grant is the real trust checkpoint now, not an email round-trip — admins should confirm out-of-band (a call, an existing thread) that they're granting access to the actual right person, since the registered email alone doesn't prove identity.
-- **Rate limiting is in-memory and single-instance**, not a distributed guarantee — good enough to stop casual scripted abuse on a demo-scale deployment, disclosed as a real limit rather than a solved problem. A production deployment with real signup volume should move to a proper distributed limiter (e.g. Upstash) if abuse becomes a concern.
-- **Two real leftover test accounts exist from before the pivot**: `realstaffer.verify@arteagreenventures.com` and `browsertest.verify@arteagreenventures.com`, both created via real `signUp()` calls against addresses that don't exist, both still unconfirmed. Very likely part of what triggered Supabase's bounce warning. Not deleted by me — deleting `auth.users` rows is destructive and outside what I should do unilaterally. A third test account, `browserclienttest.demo@othercompany.example`, was also created this session via the client path — harmless (no email was ever sent for it), but also sitting in `auth.users` if you want a clean slate.
+- Split this phase into three batches (Batch A done now; B needs a Turnstile site key from you; C needs your Azure/Google app registrations) rather than attempt everything in one pass, per this project's standing invitation to split large phases.
+- Chose Cloudflare Turnstile over hCaptcha for Batch B (your call, confirmed).
+- Config-based CSP over nonce-based, accepting `'unsafe-inline'` on two directives, to avoid forcing the entire app into dynamic rendering (see above).
+- Did not force-fix the 3 remaining `npm audit` findings — the only available "fix" is a breaking, years-old Next.js downgrade that would do far more damage than the (mostly inapplicable) vulnerabilities themselves.
 
 ## Known issues / TODO
-- No test framework exists in this repo; all verification above is empirical (curl, browser, build, lint), matching this project's established convention.
-- Account enumeration: a signup attempt against an already-registered email returns a different error than success, which technically confirms whether an address has an account. Consistent with how most signup forms behave; not treated as a blocker here.
-- Leftover test accounts noted above — worth clearing from Supabase Dashboard → Authentication → Users at your convenience.
+- Re-run `npm audit` periodically (e.g. before each deploy) until Next.js ships a stable release patching the 3 remaining findings.
+- Confirm what the "Anonymous sign-ins" rate limit actually governs in your specific project before changing it.
 
 ## Blocked on / needs a decision
-- Whether to invest in custom SMTP (Resend/Postmark/SendGrid) instead of Supabase's default mailer for the staff path — not urgent at today's likely volume, worth revisiting if staff signups become frequent.
+- **Batch B (CAPTCHA)**: needs a Cloudflare Turnstile site key from you (create a widget in the Cloudflare dashboard; the secret key goes only into Supabase's dashboard under Authentication → Attack Protection, never here).
+- **Batch C (OAuth)**: needs your Azure app registration (single-tenant, AGV's Entra ID tenant) and Google Cloud Console OAuth app, each configured with their credentials directly in Supabase's dashboard, before I can wire up and test either sign-in path.
 
 ## Next step
-Nothing blocking. Optional cleanup: remove the three leftover test accounts from Supabase's dashboard. Otherwise this is ready to use — a client can register today and an admin can grant them access via the existing `/admin/access` page.
+Apply the rate-limit table above in Supabase's dashboard whenever convenient — low risk, no code dependency. Send over the Turnstile site key when you have it and I'll start Batch B. Let me know once your Azure and/or Google app registrations are done and I'll start Batch C.
