@@ -11,6 +11,8 @@ Started as an admin-invite-only client model (per an earlier brief), then pivote
 
 **The admin-invite flow built earlier this session (`/api/admin/invite-client`, `/invite/complete`, the "Invite client" button) was fully removed** — deleted, not deprecated, with `AdminApplicationView.tsx` reverted to its pre-invite state. `grep` confirms no dangling references anywhere in `src/`.
 
+**`20260724100000_fix_new_user_default_role.sql` (carried over from the previous session) has now been applied by the user, confirmed successful.** The `agv_handle_new_user()` trigger's role default is fixed at the database level too — belt-and-suspenders alongside both signup branches already passing `role` explicitly.
+
 **Fully verified, end to end:**
 - `npm run build` and `npm run lint` both pass clean.
 - Validation layer (shared by both branches): malformed JSON, missing fields, and a malformed email shape all correctly rejected with clear messages, before ever calling Supabase — checked live via curl.
@@ -32,7 +34,6 @@ Started as an admin-invite-only client model (per an earlier brief), then pivote
 - **Two real leftover test accounts exist from before the pivot**: `realstaffer.verify@arteagreenventures.com` and `browsertest.verify@arteagreenventures.com`, both created via real `signUp()` calls against addresses that don't exist, both still unconfirmed. Very likely part of what triggered Supabase's bounce warning. Not deleted by me — deleting `auth.users` rows is destructive and outside what I should do unilaterally. A third test account, `browserclienttest.demo@othercompany.example`, was also created this session via the client path — harmless (no email was ever sent for it), but also sitting in `auth.users` if you want a clean slate.
 
 ## Known issues / TODO
-- `20260724100000_fix_new_user_default_role.sql` (from the previous session) is still unapplied. Doesn't block either signup path today, since both always pass `role` explicitly in metadata — but it's still a real, valid fix for the trigger's stale default.
 - No test framework exists in this repo; all verification above is empirical (curl, browser, build, lint), matching this project's established convention.
 - Account enumeration: a signup attempt against an already-registered email returns a different error than success, which technically confirms whether an address has an account. Consistent with how most signup forms behave; not treated as a blocker here.
 - Leftover test accounts noted above — worth clearing from Supabase Dashboard → Authentication → Users at your convenience.
