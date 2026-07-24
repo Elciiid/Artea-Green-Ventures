@@ -25,6 +25,19 @@
 // not a distributed one — it resets on redeploy/restart and isn't shared
 // across multiple server instances, so treat it as raising the bar against
 // casual scripted abuse, not a hard guarantee at real production scale.
+//
+// CAPTCHA: this app never holds the Turnstile secret key (Supabase-dashboard
+// only, same boundary as every other credential here), so verification has
+// to happen through a real Supabase Auth call, which checks the token
+// server-side using the secret Supabase already has. That's a clean fit for
+// the staff branch (captchaToken passed straight into signUp()) but
+// admin.createUser() — the client branch — is an Admin API call and
+// structurally doesn't support CAPTCHA at all. So for clients: create the
+// account first (unavoidable), then immediately require the SAME captcha
+// token to succeed on a real signInWithPassword() call; if that fails for
+// any reason, delete the account that was just created. No persistent
+// account survives a missing/invalid token, and no email is ever sent
+// either way — the account just never outlives the one request.
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -54,7 +67,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: { name?: string; email?: string; password?: string };
+    let body: { name?: string; email?: string; password?: string; turnstileToken?: string };
     try {
       body = await request.json();
     } catch {
@@ -64,6 +77,7 @@ export async function POST(request: Request) {
     const name = body.name?.trim() ?? "";
     const email = body.email?.trim() ?? "";
     const password = body.password ?? "";
+    const turnstileToken = body.turnstileToken ?? "";
 
     if (!name || !email || password.length < 8) {
       return NextResponse.json(
@@ -74,6 +88,9 @@ export async function POST(request: Request) {
     if (!EMAIL_SHAPE.test(email)) {
       return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     }
+    if (!turnstileToken) {
+      return NextResponse.json({ error: "Complete the verification challenge." }, { status: 400 });
+    }
 
     const domain = email.toLowerCase().split("@")[1];
     const isStaff = domain === ALLOWED_STAFF_DOMAIN;
@@ -83,7 +100,7 @@ export async function POST(request: Request) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, role: "staff" } },
+        options: { data: { name, role: "staff" }, captchaToken: turnstileToken },
       });
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 });
@@ -102,9 +119,11 @@ export async function POST(request: Request) {
 
     // Client path — created pre-verified via the Admin API so Supabase never
     // sends (and can never bounce) a confirmation email for an address we
-    // haven't proven ownership of.
+    // haven't proven ownership of. Not CAPTCHA-gated at creation (Admin API
+    // calls don't support it) — verified immediately after via the
+    // signInWithPassword call below instead; see the file header comment.
     const adminClient = getSupabaseServiceClient();
-    const { error: createError } = await adminClient.auth.admin.createUser({
+    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -113,19 +132,28 @@ export async function POST(request: Request) {
     if (createError) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
+    const createdId = created.user?.id;
 
     // createUser() doesn't return a session — sign in immediately so the
     // browser can hydrate its own session, same contract as the staff path.
+    // This call is also where the CAPTCHA token actually gets checked for
+    // this branch (see file header) — on any failure here, roll back the
+    // account we just created rather than leave an unverified one behind.
     const anonClient = getSupabaseServerClient();
     const { data: signedIn, error: signInError } = await anonClient.auth.signInWithPassword({
       email,
       password,
+      options: { captchaToken: turnstileToken },
     });
     if (signInError || !signedIn.session) {
-      return NextResponse.json(
-        { error: "Account created, but couldn't sign you in automatically — sign in from the login page." },
-        { status: 500 }
-      );
+      if (createdId) {
+        await adminClient.auth.admin.deleteUser(createdId);
+      }
+      const message =
+        signInError?.message.toLowerCase().includes("captcha")
+          ? "Complete the verification challenge."
+          : "Something went wrong creating your account. Try again.";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
 
     return NextResponse.json({

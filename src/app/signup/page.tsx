@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useReducedMotionPref } from "@/lib/preferences";
 import { Wordmark } from "@/components/Logo";
+import Turnstile from "@/components/Turnstile";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { roleHome } from "@/lib/session";
 
@@ -38,6 +39,7 @@ export default function SignUpPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -55,13 +57,17 @@ export default function SignUpPage() {
       setError("The passwords don't match.");
       return;
     }
+    if (!turnstileToken) {
+      setError("Complete the verification challenge below.");
+      return;
+    }
 
     setBusy(true);
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, turnstileToken }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
@@ -201,6 +207,11 @@ export default function SignUpPage() {
                 />
               </div>
 
+              <Turnstile
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+              />
+
               {error && (
                 <p role="alert" className="text-xs leading-relaxed text-amber">
                   {error}
@@ -209,7 +220,7 @@ export default function SignUpPage() {
 
               <button
                 type="submit"
-                disabled={busy}
+                disabled={busy || !turnstileToken}
                 className="w-full rounded-full bg-signal py-3 text-sm font-semibold text-void transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
               >
                 {busy ? "Creating account…" : "Create account"}
