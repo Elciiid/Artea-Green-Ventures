@@ -1,19 +1,17 @@
 "use client";
 
-// Public sign-up — self-serve real staff accounts, restricted to
-// @arteagreenventures.com email addresses. The actual domain check and the
-// signUp() call itself both live server-side in
-// src/app/api/auth/signup/route.ts — this page POSTs there rather than
-// calling supabase.auth.signUp() directly, so the restriction can't be
-// skipped by calling that client method straight from devtools. On success
-// this page hydrates its own browser session from the tokens the route
+// Public sign-up — serves both staff and clients from one form.
+// src/app/api/auth/signup/route.ts decides which: an
+// @arteagreenventures.com email becomes staff (real signUp(), Supabase sends
+// its usual verification email); any other email becomes a client, created
+// already-verified via the Admin API with no email sent at all — clients
+// start with zero application access regardless (an admin still has to
+// grant it via /admin/access), so there's no invite/verification round-trip
+// to wait on. This page never calls supabase.auth.signUp() directly — it
+// POSTs to the route, so the domain branch can't be skipped from devtools.
+// On success it hydrates its own browser session from the tokens the route
 // returns (setSession), since the actual account creation happened
-// server-side.
-//
-// New accounts still default to role "staff" (unchanged) — see
-// 20260724100000_fix_new_user_default_role.sql for a still-pending,
-// unrelated trigger-default fix (doesn't block this flow, which always
-// passes role explicitly).
+// server-side, then redirects based on the role the route resolved.
 //
 // Shares the login page's exact visual language (same glass card, inputs,
 // button) rather than inventing a second sign-up-flow identity.
@@ -74,7 +72,8 @@ export default function SignUpPage() {
       if (result.session) {
         // The route already created the account server-side — hydrate this
         // browser's own session from the tokens it returned. onAuthStateChange
-        // (session.ts) picks this up from here; staff's home is /home.
+        // (session.ts) picks this up from here. Redirect based on whichever
+        // role the route resolved (staff → /home, client → /portal).
         const supabase = getSupabaseClient();
         const { error: setErr } = await supabase.auth.setSession(result.session);
         if (setErr) {
@@ -82,10 +81,11 @@ export default function SignUpPage() {
           setBusy(false);
           return;
         }
-        router.push(roleHome("staff"));
+        router.push(roleHome(result.role === "client" ? "client" : "staff"));
         return;
       }
-      // No session back: email confirmation is required before sign-in.
+      // No session back: this only happens on the staff path, when this
+      // Supabase project's own "Confirm email" setting requires it.
       setPendingConfirmation(true);
       setBusy(false);
     } catch (err) {
@@ -112,9 +112,9 @@ export default function SignUpPage() {
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold">Create an account</h1>
           <p className="mt-2 text-sm leading-relaxed text-ash">
-            Register with your @arteagreenventures.com email — useful for
-            trying two-step verification, which is turned off for the shared
-            demo accounts.
+            AGV team? Use your @arteagreenventures.com email — we&apos;ll send
+            a quick verification link. Client of ours? Use your own work
+            email and you&apos;ll go straight to your applications.
           </p>
 
           {pendingConfirmation ? (
