@@ -16,3 +16,10 @@
 
 # vercel
 .vercel
+
+# AI coding-session working docs — not application code, don't belong in
+# a repo meant to read as a real project. HANDOFF.md is a narrative meant
+# for pasting into a new chat session; docs/superpowers/ holds generated
+# implementation plans.
+HANDOFF.md
+docs/superpowers/
