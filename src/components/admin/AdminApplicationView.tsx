@@ -12,10 +12,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ApplicationDetail from "@/components/ApplicationDetail";
+import InviteClientForm from "@/components/admin/InviteClientForm";
 import {
   addActivityNote,
   changeApplicationStage,
   fetchApplicationByReference,
+  findApplicationId,
 } from "@/lib/supabase/applications";
 import { uploadDocument } from "@/lib/supabase/documents";
 import { useSession } from "@/lib/session";
@@ -25,7 +27,7 @@ type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "not-found" }
-  | { status: "ready"; app: Application };
+  | { status: "ready"; app: Application; applicationId: string | null };
 
 export default function AdminApplicationView({ id }: { id: string }) {
   const accountId = useSession((s) => s.account?.id);
@@ -42,10 +44,10 @@ export default function AdminApplicationView({ id }: { id: string }) {
   useEffect(() => {
     let cancelled = false;
     setState({ status: "loading" });
-    fetchApplicationByReference(clean)
-      .then((app) => {
+    Promise.all([fetchApplicationByReference(clean), findApplicationId(clean)])
+      .then(([app, applicationId]) => {
         if (cancelled) return;
-        setState(app ? { status: "ready", app } : { status: "not-found" });
+        setState(app ? { status: "ready", app, applicationId } : { status: "not-found" });
       })
       .catch((e) => {
         if (cancelled) return;
@@ -61,20 +63,29 @@ export default function AdminApplicationView({ id }: { id: string }) {
 
   async function handleStageChange(stage: Stage, actor: string) {
     await changeApplicationStage(clean, stage, actor);
-    const app = await fetchApplicationByReference(clean);
-    if (app) setState({ status: "ready", app });
+    const [app, applicationId] = await Promise.all([
+      fetchApplicationByReference(clean),
+      findApplicationId(clean),
+    ]);
+    if (app) setState({ status: "ready", app, applicationId });
   }
 
   async function handleAddNote(text: string, actor: string) {
     await addActivityNote(clean, actor, text);
-    const app = await fetchApplicationByReference(clean);
-    if (app) setState({ status: "ready", app });
+    const [app, applicationId] = await Promise.all([
+      fetchApplicationByReference(clean),
+      findApplicationId(clean),
+    ]);
+    if (app) setState({ status: "ready", app, applicationId });
   }
 
   async function handleUploadDocument(documentId: string, file: File, actor: string) {
     await uploadDocument(clean, documentId, file, actor);
-    const app = await fetchApplicationByReference(clean);
-    if (app) setState({ status: "ready", app });
+    const [app, applicationId] = await Promise.all([
+      fetchApplicationByReference(clean),
+      findApplicationId(clean),
+    ]);
+    if (app) setState({ status: "ready", app, applicationId });
   }
 
   return (
@@ -87,7 +98,13 @@ export default function AdminApplicationView({ id }: { id: string }) {
       </Link>
 
       {state.status === "ready" ? (
-        <div className="mt-8">
+        <div className="mt-8 space-y-6">
+          {state.applicationId && (
+            <InviteClientForm
+              applicationId={state.applicationId}
+              applicationReference={clean}
+            />
+          )}
           <ApplicationDetail
             app={state.app}
             canEdit
