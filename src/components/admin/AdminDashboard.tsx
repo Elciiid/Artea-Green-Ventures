@@ -40,9 +40,8 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-    // Re-fetch whenever the signed-in identity changes — the dev QuickSwitch
-    // can move between two "user" accounts without a route change, since
-    // both land on the same /portal path.
+    // Re-fetch whenever the signed-in identity changes, since switching
+    // accounts doesn't always trigger a route change.
   }, [accountId]);
 
   if (state.status === "loading") {

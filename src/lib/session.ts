@@ -1,7 +1,12 @@
 // Session — real Supabase Auth (Phase 10a), replacing the hardcoded
-// "any password works" demo check. The store surface (account, hydrated,
-// signIn, signOut, switchAccount) is unchanged so downstream components didn't
-// have to change; only the internals are now real auth + the agv_profiles row.
+// "any password works" demo check.
+//
+// switchAccount() and the one-click login rows were removed for production
+// readiness — both re-authenticated via signInWithPassword() with zero human
+// interaction, which is fundamentally incompatible with Supabase's
+// project-wide CAPTCHA protection (one master toggle covering every sign-in,
+// no way to exempt specific callers). Real sign-in now always goes through
+// the manual form, which solves a Turnstile challenge.
 
 import { create } from "zustand";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -31,13 +36,13 @@ export function roleHome(role: Role): string {
 }
 
 /**
- * Whether to expose dev-only surfaces (the account quick-switcher, the
- * one-click demo sign-in rows, and the demo banner).
+ * Whether to expose dev-only surfaces (currently just the demo banner —
+ * the account quick-switcher and one-click sign-in rows this used to also
+ * gate were removed; see the file header comment).
  *
  * FAIL-SAFE by design: hidden by default, shown only when we can positively
- * confirm this is not a real production environment. The quick-switcher is a
- * genuine auth bypass (shared dev seed password), so a forgotten or misspelled
- * env var must never be able to expose it.
+ * confirm this is not a real production environment. A forgotten or
+ * misspelled env var must never be able to expose a dev-only surface.
  *
  *  - Primary signal is NODE_ENV, which Next.js sets automatically at build time
  *    (`next build` / `next start` force "production"). A real production deploy
@@ -55,7 +60,6 @@ export function showDevTools(): boolean {
 }
 
 // ——— dev/staging seed accounts (NOT the production user list) ———
-// Used only by the dev quick-switcher and the login screen's one-click rows.
 export const DEV_ACCOUNTS: { email: string; name: string; role: Role }[] = [
   { email: "admin@agv-demo.com", name: "A. Mercer", role: "admin" },
   { email: "user1@agv-demo.com", name: "S. Whitfield", role: "staff" },
@@ -63,20 +67,16 @@ export const DEV_ACCOUNTS: { email: string; name: string; role: Role }[] = [
   { email: "client1@agv-demo.com", name: "N. Reyes", role: "client" },
 ];
 
-export function nextAccount(current: { email: string }): { email: string; name: string; role: Role } {
-  const idx = DEV_ACCOUNTS.findIndex((a) => a.email === current.email);
-  return DEV_ACCOUNTS[(idx + 1) % DEV_ACCOUNTS.length];
-}
-
 /**
  * Whether an email belongs to one of the dev/staging seed accounts.
  *
- * Used to EXCLUDE these accounts from MFA enrollment (Phase 10c). The dev
- * QuickSwitch tool re-authenticates as each seed account with the shared dev
- * seed password (`signInWithPassword`); once MFA enforcement lands (Phase
- * 12+11) an enrolled TOTP factor on a seed account would leave that switch
- * stranded at AAL1 with no way to answer the challenge. Keeping seed accounts
- * factor-free is deliberate — do NOT "fix" this by allowing enrollment on them.
+ * Used to EXCLUDE these accounts from MFA enrollment (Phase 10c). This was
+ * originally justified by the dev quick-switcher re-authenticating as seed
+ * accounts with no way to answer an MFA challenge — that tool is gone now
+ * (see the file header comment), so the original justification is weaker
+ * than it was. Left unchanged here since removing the exclusion wasn't asked
+ * for; worth revisiting deliberately rather than as a side effect of this
+ * cleanup. See isSeedAccount() call sites for where this still matters.
  */
 export function isSeedAccount(email: string): boolean {
   return DEV_ACCOUNTS.some((a) => a.email === email.toLowerCase());
@@ -124,10 +124,8 @@ type SessionState = {
   account: Account | null;
   /** true once the initial auth state has resolved */
   hydrated: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  /** dev-only: re-authenticate as the next seed account (cycles) */
-  switchAccount: () => Promise<{ error: string | null }>;
   _init: () => void;
   _initialized: boolean;
 };
@@ -156,12 +154,13 @@ export const useSession = create<SessionState>((set, get) => ({
     }
   },
 
-  signIn: async (email, password) => {
+  signIn: async (email, password, captchaToken) => {
     try {
       const supabase = getSupabaseClient();
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
+        options: captchaToken ? { captchaToken } : undefined,
       });
       if (error) return { error: error.message };
       // onAuthStateChange will populate `account`.
@@ -176,29 +175,6 @@ export const useSession = create<SessionState>((set, get) => ({
       await getSupabaseClient().auth.signOut();
     } catch {
       /* not configured — nothing to sign out of */
-    }
-  },
-
-  switchAccount: async () => {
-    if (!showDevTools()) return { error: "Account switching is disabled in production." };
-    const devPassword = process.env.NEXT_PUBLIC_DEV_SEED_PASSWORD;
-    if (!devPassword) {
-      return { error: "NEXT_PUBLIC_DEV_SEED_PASSWORD is not set (dev only)." };
-    }
-    const current = get().account;
-    const target = current
-      ? nextAccount({ email: current.email })
-      : DEV_ACCOUNTS[0];
-    try {
-      const supabase = getSupabaseClient();
-      await supabase.auth.signOut();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: target.email,
-        password: devPassword,
-      });
-      return { error: error ? error.message : null };
-    } catch (e) {
-      return { error: e instanceof Error ? e.message : "Auth is not configured." };
     }
   },
 }));

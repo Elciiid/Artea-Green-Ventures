@@ -3,8 +3,12 @@
 // Login — shares the same light off-white background, glass-card surface,
 // and sage/forest palette as every other screen in the app (no separate
 // dark-panel design system for the logged-out state anymore). Real
-// Supabase email/password auth (Phase 10a) underneath; the one-click
-// account rows are dev-only convenience over the same real sign-in.
+// Supabase email/password auth (Phase 10a) underneath.
+//
+// The one-click dev sign-in rows were removed for production readiness —
+// they re-authenticated with zero human interaction, incompatible with
+// Supabase's project-wide CAPTCHA protection (one master toggle, no way to
+// exempt specific callers). See session.ts's file header.
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -15,24 +19,6 @@ import { Wordmark } from "@/components/Logo";
 import { roleHome, showDevTools, useSession } from "@/lib/session";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-
-const QUICK_ACCESS: { email: string; label: string; hint: string }[] = [
-  {
-    email: "admin@agv-demo.com",
-    label: "Admin · A. Mercer",
-    hint: "Sees all 3 applications. Can change statuses, add notes and choose who sees what.",
-  },
-  {
-    email: "user1@agv-demo.com",
-    label: "Staff · S. Whitfield",
-    hint: "Sees 2 of the 3 applications. Can update status and add notes.",
-  },
-  {
-    email: "user2@agv-demo.com",
-    label: "Staff · R. Santiago",
-    hint: "Sees 1 of the 3 applications. Can update status and add notes.",
-  },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,20 +32,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const showQuickAccess = showDevTools();
-  const devPassword = process.env.NEXT_PUBLIC_DEV_SEED_PASSWORD ?? "";
-
   useEffect(() => {
     if (hydrated && account) router.replace(roleHome(account.role));
   }, [hydrated, account, router]);
-
-  async function enterAs(targetEmail: string) {
-    setError(null);
-    setBusy(true);
-    const { error } = await signIn(targetEmail, devPassword);
-    setBusy(false);
-    if (error) setError(`Couldn't sign in: ${error}`);
-  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -100,34 +75,7 @@ export default function LoginPage() {
             Sign in
           </p>
 
-          {showQuickAccess && (
-            <div className="mt-4 space-y-2">
-              {QUICK_ACCESS.map(({ email: accEmail, label, hint }) => (
-                <button
-                  key={accEmail}
-                  type="button"
-                  onClick={() => enterAs(accEmail)}
-                  disabled={busy}
-                  className="group flex w-full items-center justify-between gap-3 rounded-xl border border-ash/15 bg-white/35 px-4 py-2.5 text-left transition hover:border-signal/40 hover:bg-white/55 disabled:opacity-50"
-                >
-                  <span>
-                    <span className="block font-display text-sm font-bold">{label}</span>
-                    <span className="mt-0.5 block text-label text-ash">{hint}</span>
-                  </span>
-                  <span aria-hidden className="text-signal transition group-hover:translate-x-0.5">
-                    →
-                  </span>
-                </button>
-              ))}
-              <div className="flex items-center gap-3 pt-1">
-                <span className="h-px flex-1 bg-ash/20" />
-                <span className="text-label uppercase tracking-[0.14em] text-ash">or sign in manually</span>
-                <span className="h-px flex-1 bg-ash/20" />
-              </div>
-            </div>
-          )}
-
-          <form onSubmit={onSubmit} className="mt-5 space-y-4" noValidate>
+          <form onSubmit={onSubmit} className="mt-4 space-y-4" noValidate>
             <div>
               <label htmlFor="email" className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
                 Email

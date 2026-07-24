@@ -6,10 +6,9 @@
 //  • This builds the MFA *mechanism* only. Gating any action on MFA/verification
 //    status is Phase 12+11's job (the verification_level flag) — nothing here
 //    enforces AAL2.
-//  • Dev/staging seed accounts are excluded from MFA enrollment. The dev
-//    QuickSwitch re-authenticates as each seed account with the shared dev
-//    password; an enrolled factor there would strand that switch once
-//    enforcement lands. See isSeedAccount() in session.ts. Do not "fix" this.
+//  • Dev/staging seed accounts are excluded from MFA enrollment — see
+//    isSeedAccount() in session.ts for the current reasoning (a holdover
+//    from a now-removed auth-bypass tool, left unchanged deliberately).
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";

@@ -19,7 +19,6 @@ import { useEffect, useRef, useState } from "react";
 import { roleHome, showDevTools, useSession, type Role } from "@/lib/session";
 import { useApplications } from "@/lib/applications";
 import { Wordmark } from "@/components/Logo";
-import QuickSwitch from "@/components/QuickSwitch";
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean };
 
@@ -230,10 +229,6 @@ export default function AppShell({
                     </p>
                   </div>
                   <MenuLink href="/account">Account settings</MenuLink>
-                  {/* dev-only; QuickSwitch self-hides via showDevTools() */}
-                  <div className="px-3 py-1.5">
-                    <QuickSwitch />
-                  </div>
                   {showDevTools() && account.role === "admin" && (
                     <button
                       type="button"
