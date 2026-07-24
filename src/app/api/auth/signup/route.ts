@@ -17,6 +17,14 @@
 // The whole handler runs inside one try/catch: any unexpected failure must
 // still come back as a clean JSON error, never Next's default HTML error
 // page — the client always calls res.json() on the response.
+//
+// Rate limit: the client-signup branch creates accounts with the
+// service_role key, bypassing Supabase's own signup throttling entirely —
+// without a limit here, this endpoint would let anyone script mass account
+// creation with zero friction. This is a simple in-memory per-IP limiter,
+// not a distributed one — it resets on redeploy/restart and isn't shared
+// across multiple server instances, so treat it as raising the bar against
+// casual scripted abuse, not a hard guarantee at real production scale.
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -24,8 +32,28 @@ import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabas
 const ALLOWED_STAFF_DOMAIN = "arteagreenventures.com";
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const attemptsByIp = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const attempts = (attemptsByIp.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  attempts.push(now);
+  attemptsByIp.set(ip, attempts);
+  return attempts.length > RATE_LIMIT_MAX;
+}
+
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Too many attempts. Wait a few minutes and try again." },
+        { status: 429 }
+      );
+    }
+
     let body: { name?: string; email?: string; password?: string };
     try {
       body = await request.json();
@@ -76,7 +104,7 @@ export async function POST(request: Request) {
     // sends (and can never bounce) a confirmation email for an address we
     // haven't proven ownership of.
     const adminClient = getSupabaseServiceClient();
-    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+    const { error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
