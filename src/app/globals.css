@@ -1,110 +1,88 @@
 @import "tailwindcss";
 
-/* AGV design tokens — from the approved mood board.
- *
- * The @theme block holds the DARK palette, which is the default. Light mode
- * re-points the same variables under [data-theme="light"] further down, so
- * every existing utility (bg-void, text-bone, border-ash…) themes itself with
- * no component changes.
+/* AGV Home design tokens (Phase 19 whole-app reskin) — warm green/cream
+ * identity, matching a supplied reference composition exactly (recolored
+ * from the reference's lime to sage/forest green). Single fixed identity:
+ * Phase 19 also removed the user-facing display-settings panel (theme +
+ * text-size toggles), so there's no second palette or scale to support —
+ * these are just the app's colors, not a "light theme" among several.
  *
  * Read the names as ROLES, not literal colors:
- *   void = page surface · pine = panel surface · bone = primary text
+ *   void = page surface · pine = panel/card surface · bone = primary text
  *   ash  = secondary text/borders · signal = interactive accent
  *   contour = resolved/positive · amber = active/in-progress
+ *   rail = the fixed dark-green surface used for the circular brand mark,
+ *   the login card's backdrop, and the Home hero's glass card cluster.
  */
 @theme {
-  --color-void: #0a0f0c;
-  --color-pine: #151f19;
-  --color-signal: #c9ff4d;
-  --color-contour: #6fe7b0;
-  --color-amber: #e8a94c;
-  --color-bone: #eceee9;
-  --color-ash: #8a968e;
+  --color-void: #f1f3f1; /* cool off-white/gray — page surface */
+  --color-pine: #ffffff; /* white — panel/card surface */
+  --color-bone: #1e2a1f; /* ink — primary text */
+  --color-ash: #6b7264; /* secondary text/borders */
+  --color-signal: #2f7040;
+  --color-contour: #3f7652;
+  --color-amber: #8a5a17;
 
-  --font-display: var(--font-archivo), "Archivo", sans-serif;
+  --color-rail: #1b3a2b;
+  --color-rail-ink: #f0ede2;
+  --color-rail-muted: #9db6a4;
+
+  --font-display: var(--font-outfit), "Outfit", sans-serif;
   --font-sans: var(--font-inter), "Inter", sans-serif;
   --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
 
   /* Type-size floor. 0.75rem is the smallest step already in the type scale
      (Tailwind's text-xs), so it's the system's own minimum rather than an
      arbitrary number. Every uppercase mono label uses this — nothing in the
-     UI is allowed to go below it. Being in rem, it scales with the user's
-     text-size preference. */
+     UI is allowed to go below it. */
   --text-label: 0.75rem;
   --text-label--line-height: 1.35;
 
-  /* ——— Home hub palette (Phase 18) ———
-   * A second, FIXED palette — not theme-reactive like the tracker's void/
-   * pine/signal tokens above. Scoped by convention (only Home components use
-   * these) rather than by CSS nesting, and deliberately doesn't respond to
-   * data-theme: arteagreenventures.com, which this tone is drawn from, has
-   * no dark mode either, and building one was out of this phase's timebox.
-   * AppShell's shared chrome (sidebar/header/footer) around Home pages is
-   * untouched and keeps following the tracker's normal light/dark tokens —
-   * only the Home/announcements/directory/resources content area uses these. */
-  --color-home-cream: #f7f3e9;
-  --color-home-panel: #ffffff;
-  --color-home-ink: #1e2a1f;
-  --color-home-muted: #6b7264;
-  --color-home-sage: #2f7040;
-  --color-home-sage-deep: #234f30;
-  --color-home-border: #e4dcc8;
+  --pulse-rgb: 138 90 23;
+  --shadow-panel: 0 18px 44px -22px rgb(30 42 31 / 0.18);
+  --shadow-pop: 0 14px 34px -12px rgb(30 42 31 / 0.2);
+  --glass-bg: rgb(255 255 255 / 0.6);
+  --glass-border: rgb(255 255 255 / 0.7);
 }
 
-/* Light is the default register (Phase 16); the blocking script always sets
-   data-theme before paint, so this base only covers the no-JS case. */
 html {
   color-scheme: light;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
+/* Frosted-glass surface: use over photography or gradients, not over plain
+   body background (redundant blur there, no visual payoff).
+   Blur itself comes from Tailwind's backdrop-blur-* utility on the element
+   (pair it in markup, e.g. class="glass backdrop-blur-xl") — a hand-written
+   backdrop-filter declaration here gets silently stripped by this project's
+   CSS build (Lightning CSS via @tailwindcss/postcss), confirmed by
+   inspecting the compiled stylesheet; Tailwind's own utility survives. */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
 }
 
-/* ——— Light theme: "field notebook / blueprint" ———
- * Not an inversion. Ink on paper, flat contour lines, no glow.
- * `data-theme` is set to the RESOLVED value ("light"/"dark") by the
- * blocking script in layout.tsx, before first paint. */
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --color-void: #f4f1e8; /* paper — page surface */
-  --color-pine: #eae5d6; /* paper-2 — panel surface */
-  --color-bone: #10140f; /* ink — primary text */
-  --color-ash: #6b6558; /* secondary text/borders (darkened from #7A7568 for AA) */
-  --color-signal: #3c6b12;
-  --color-contour: #1b6b49;
-  --color-amber: #8a5a17; /* darkened from #A9701F for AA on paper */
+/* Fixed dark glass, light text — for cards floating over a photo/gradient
+   (the Home hero's card cluster), where dark glass reads correctly against
+   imagery regardless of the surrounding light page. */
+.glass-dark {
+  background: rgb(27 58 43 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  color: #f0ede2;
+}
+.glass-dark .glass-dark-muted {
+  color: rgb(240 237 226 / 0.72);
 }
 
-/* Stepper pulse + elevation are theme-dependent: heavy black shadows and a
-   bright amber glow both read wrong on paper. */
-:root {
-  --pulse-rgb: 232 169 76;
-  --shadow-panel: 0 30px 80px -24px rgb(0 0 0 / 0.7);
-  --shadow-pop: 0 20px 52px -14px rgb(0 0 0 / 0.85);
-}
-
-:root[data-theme="light"] {
-  --pulse-rgb: 138 90 23;
-  --shadow-panel: 0 18px 44px -22px rgb(16 20 15 / 0.2);
-  --shadow-pop: 0 14px 34px -12px rgb(16 20 15 / 0.22);
-}
-
-/* Text-size preference. Scaling the root font size means every rem-based
-   size moves together, including the --text-label floor. */
-:root {
-  font-size: 100%;
-}
-:root[data-text-size="large"] {
-  font-size: 112.5%;
-}
-:root[data-text-size="larger"] {
-  font-size: 125%;
-}
-
+/* A soft, fixed-position gradient wash under the flat page color — glass
+   panels (.glass, .login-card) need *something* with texture to blur
+   against; blurring flat --color-void is visually a no-op. Subtle by
+   design: this is a wash, not a hero background. */
 body {
-  background: var(--color-void);
+  background:
+    radial-gradient(120% 70% at 12% -10%, rgb(47 112 64 / 0.12), transparent 60%),
+    radial-gradient(100% 60% at 100% 0%, rgb(63 118 82 / 0.1), transparent 55%),
+    var(--color-void);
+  background-attachment: fixed;
   color: var(--color-bone);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -121,65 +99,16 @@ body {
 }
 
 /* ——— topographic motif ———
- * Rendered from CSS, not from a JS theme check, so the SVG is identical on
- * the server and the client (no hydration mismatch). Per-path opacity rides
- * in on --topo-o; light mode scales it up and drops the glow pass, giving
- * flat ink contours instead of glowing ones. */
+ * Still used by TopoField/TopoPlate on Application Detail only (left
+ * as-is per the reskin's explicit scope). Flat ink contours, no glow —
+ * matches this app's one visual identity now. */
 .topo-line {
-  stroke-opacity: var(--topo-o, 0.2);
-}
-
-:root[data-theme="light"] .topo-line {
   stroke-opacity: calc(var(--topo-o, 0.2) * 2.4);
   stroke-width: 1.1;
 }
 
-:root[data-theme="light"] .topo-glow {
+.topo-glow {
   display: none;
-}
-
-/* ——— site photography ———
- * Dark: heavy duotone so daylight photos sit in a near-black page.
- * Light: barely-there wash — the same photo only needs to settle onto paper. */
-.site-photo-img {
-  filter: grayscale(1) contrast(1.25) brightness(0.42);
-}
-
-.site-photo-tint {
-  background: var(--color-contour);
-  opacity: 0.6;
-  mix-blend-mode: color;
-}
-
-.site-photo-wash {
-  background: color-mix(in srgb, var(--color-void) 45%, transparent);
-}
-
-:root[data-theme="light"] .site-photo-img {
-  filter: grayscale(1) contrast(0.95) brightness(1.08);
-}
-
-:root[data-theme="light"] .site-photo-tint {
-  opacity: 0.28;
-}
-
-:root[data-theme="light"] .site-photo-wash {
-  background: color-mix(in srgb, var(--color-void) 30%, transparent);
-}
-
-/* The login hero art is near-black by design, so it can't sit on paper.
-   Light mode hides it and shows contour lines on the bare page instead —
-   which is the light-mode identity anyway. */
-:root[data-theme="light"] .login-hero {
-  display: none;
-}
-
-.login-topo-light {
-  display: none;
-}
-
-:root[data-theme="light"] .login-topo-light {
-  display: block;
 }
 
 /* Skip link — hidden until focused. Written as explicit CSS rather than
@@ -223,38 +152,17 @@ body {
   animation: step-pulse 2.4s ease-out infinite;
 }
 
-/* Motion preference. The in-app override wins; the OS setting is the
-   fallback, which also covers the pre-hydration frame. `data-motion` is set
-   to the resolved value ("reduced" or "full") by PreferencesEffect. */
+/* Motion: OS-level prefers-reduced-motion only (Phase 19 removed the manual
+   override UI along with the rest of display settings). */
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion="full"]) .step-pulse {
+  .step-pulse {
     animation: none;
   }
-}
 
-:root[data-motion="reduced"] .step-pulse {
-  animation: none;
-}
-
-:root[data-motion="reduced"] *,
-:root[data-motion="reduced"] *::before,
-:root[data-motion="reduced"] *::after {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  scroll-behavior: auto !important;
-}
-
-/* very quiet film grain over everything — on paper it reads as tooth */
-.noise {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-:root[data-theme="light"] .noise {
-  opacity: 0.035;
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

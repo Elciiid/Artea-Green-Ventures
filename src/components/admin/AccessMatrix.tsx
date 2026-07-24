@@ -131,7 +131,7 @@ export default function AccessMatrix() {
       </div>
 
       {state.status === "loading" ? (
-        <div className="mt-9 border-y-2 border-bone/80 py-16 text-center">
+        <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
           <p
             role="status"
             aria-live="polite"
@@ -145,7 +145,7 @@ export default function AccessMatrix() {
           </p>
         </div>
       ) : state.status === "error" ? (
-        <div className="mt-9 border-y-2 border-bone/80 py-16 text-center">
+        <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
           <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
             We couldn&apos;t load access
           </h2>
@@ -156,7 +156,7 @@ export default function AccessMatrix() {
           <motion.section
             {...enter}
             aria-label="Application access by person"
-            className="mt-9 overflow-x-auto border-y-2 border-bone/80"
+            className="glass mt-9 overflow-x-auto rounded-2xl p-2 backdrop-blur-xl"
           >
             <table className="w-full min-w-[720px] border-collapse">
               <thead>

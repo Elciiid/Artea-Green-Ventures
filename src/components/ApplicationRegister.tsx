@@ -87,7 +87,7 @@ export default function ApplicationRegister({
       {applications.length === 0 ? (
         <div className="mt-10">{emptyState}</div>
       ) : (
-        <div className="mt-9 overflow-x-auto border-y-2 border-bone/80">
+        <div className="glass mt-9 overflow-x-auto rounded-2xl p-2 backdrop-blur-xl">
           <table className="w-full min-w-[840px] border-collapse text-left">
             <caption className="sr-only">{title}</caption>
             <thead>

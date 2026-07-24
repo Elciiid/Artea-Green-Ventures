@@ -41,20 +41,20 @@ export default function DirectoryPage() {
     <HomeShell eyebrow="AGV Home" title="Staff directory">
       <HomePanel title="Admin & staff">
         {state.status === "loading" ? (
-          <p className="text-sm text-home-muted">Loading…</p>
+          <p className="text-sm text-ash">Loading…</p>
         ) : state.status === "error" ? (
-          <p className="text-sm text-home-muted">{state.message}</p>
+          <p className="text-sm text-ash">{state.message}</p>
         ) : state.entries.length === 0 ? (
-          <p className="text-sm text-home-muted">No one to show yet.</p>
+          <p className="text-sm text-ash">No one to show yet.</p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
             {state.entries.map((entry) => (
               <li
                 key={entry.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-home-border bg-home-cream px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-ash/15 bg-void/40 px-4 py-3"
               >
-                <span className="font-display text-sm font-bold text-home-ink">{entry.name}</span>
-                <span className="rounded-full border border-home-sage/40 px-2.5 py-0.5 text-label uppercase tracking-[0.14em] text-home-sage">
+                <span className="font-display text-sm font-bold text-bone">{entry.name}</span>
+                <span className="rounded-full border border-signal/40 px-2.5 py-0.5 text-label uppercase tracking-[0.14em] text-signal">
                   {entry.role}
                 </span>
               </li>

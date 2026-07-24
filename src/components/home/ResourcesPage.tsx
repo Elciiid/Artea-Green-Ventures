@@ -14,10 +14,10 @@ export default function ResourcesPage() {
             <li key={r.title}>
               <a
                 href={r.href}
-                className="block rounded-xl border border-home-border bg-home-cream px-4 py-3 transition hover:border-home-sage"
+                className="block rounded-xl border border-ash/15 bg-void/40 px-4 py-3 transition hover:border-signal"
               >
-                <span className="font-display text-sm font-bold text-home-ink">{r.title}</span>
-                <span className="mt-1 block text-sm leading-relaxed text-home-muted">
+                <span className="font-display text-sm font-bold text-bone">{r.title}</span>
+                <span className="mt-1 block text-sm leading-relaxed text-ash">
                   {r.description}
                 </span>
               </a>

@@ -25,7 +25,7 @@ export default function RegisterStatus({
       <h1 className="mt-3 font-display text-4xl font-bold text-bone sm:text-5xl">
         {title}
       </h1>
-      <div className="mt-9 border-y-2 border-bone/80 py-16 text-center">
+      <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
         {kind === "loading" ? (
           <p
             role="status"

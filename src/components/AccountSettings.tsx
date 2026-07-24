@@ -25,8 +25,7 @@ export default function AccountSettings() {
       <div>
         <h1 className="font-display text-2xl font-bold text-bone">Account</h1>
         <p className="mt-2 text-sm text-ash">
-          Manage how you sign in. Display preferences (text size, motion, theme)
-          live in the <span className="text-bone">Display</span> menu, top right.
+          Manage how you sign in.
         </p>
         <dl className="mt-5 grid gap-3 border-t border-ash/15 pt-5 sm:grid-cols-2">
           <div>

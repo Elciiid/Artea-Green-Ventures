@@ -83,7 +83,7 @@ export default function AnnouncementsPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Title"
-                className="rounded-lg border border-home-border bg-home-cream px-3 py-2 text-sm text-home-ink placeholder:text-home-muted focus:border-home-sage focus:outline-none"
+                className="rounded-lg border border-ash/20 bg-void/40 px-3 py-2 text-sm text-bone placeholder:text-ash focus:border-signal focus:outline-none"
               />
               <textarea
                 required
@@ -91,12 +91,12 @@ export default function AnnouncementsPage() {
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="What's happening?"
-                className="rounded-lg border border-home-border bg-home-cream px-3 py-2 text-sm text-home-ink placeholder:text-home-muted focus:border-home-sage focus:outline-none"
+                className="rounded-lg border border-ash/20 bg-void/40 px-3 py-2 text-sm text-bone placeholder:text-ash focus:border-signal focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={posting}
-                className="self-start rounded-full bg-home-sage px-5 py-2 text-sm font-semibold text-white transition hover:bg-home-sage-deep disabled:opacity-50"
+                className="self-start rounded-full bg-signal px-5 py-2 text-sm font-semibold text-void transition hover:brightness-110 disabled:opacity-50"
               >
                 {posting ? "Posting…" : "Post announcement"}
               </button>
@@ -106,18 +106,18 @@ export default function AnnouncementsPage() {
 
         <HomePanel title="All announcements">
           {state.status === "loading" ? (
-            <p className="text-sm text-home-muted">Loading…</p>
+            <p className="text-sm text-ash">Loading…</p>
           ) : state.status === "error" ? (
-            <p className="text-sm text-home-muted">{state.message}</p>
+            <p className="text-sm text-ash">{state.message}</p>
           ) : state.announcements.length === 0 ? (
-            <p className="text-sm text-home-muted">No announcements yet.</p>
+            <p className="text-sm text-ash">No announcements yet.</p>
           ) : (
             <ul className="flex flex-col gap-5">
               {state.announcements.map((a) => (
-                <li key={a.id} className="border-b border-home-border pb-5 last:border-b-0 last:pb-0">
-                  <p className="font-display text-base font-bold text-home-ink">{a.title}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-home-muted">{a.body}</p>
-                  <p className="mt-2 text-label uppercase tracking-[0.1em] text-home-muted">
+                <li key={a.id} className="border-b border-ash/20 pb-5 last:border-b-0 last:pb-0">
+                  <p className="font-display text-base font-bold text-bone">{a.title}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ash">{a.body}</p>
+                  <p className="mt-2 text-label uppercase tracking-[0.1em] text-ash">
                     {a.createdByName} · {formatDate(a.createdAt.slice(0, 10))}
                   </p>
                 </li>
@@ -131,10 +131,10 @@ export default function AnnouncementsPage() {
         {toast && (
           <div
             role="alert"
-            className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-home-border bg-home-panel px-5 py-2.5 shadow-[0_20px_52px_-14px_rgba(30,42,31,0.35)]"
+            className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-ash/20 bg-pine px-5 py-2.5 shadow-[var(--shadow-pop)]"
           >
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-home-sage" />
-            <span className="text-xs text-home-ink">{toast}</span>
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-signal" />
+            <span className="text-xs text-bone">{toast}</span>
           </div>
         )}
       </div>
