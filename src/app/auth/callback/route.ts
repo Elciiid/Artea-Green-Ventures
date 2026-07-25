@@ -32,6 +32,15 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
 
   if (!code) {
+    // Supabase appends error/error_code/error_description to this same
+    // redirect when the provider itself (or Supabase's own token exchange)
+    // rejects the attempt before ever issuing a code — the query string is
+    // the only place that detail lives, and it's the one thing that told us
+    // what was actually wrong across three different real failure modes
+    // while first wiring Azure (bad secret, tenant mismatch, missing email
+    // claim). Worth keeping for whenever the next provider hits its own
+    // first-run surprise.
+    console.error("[auth/callback] no code in redirect:", Object.fromEntries(searchParams));
     return NextResponse.redirect(`${origin}/?error=oauth`);
   }
 
@@ -55,6 +64,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data.user) {
+    console.error("[auth/callback] exchangeCodeForSession failed:", error?.message, error?.status);
     return NextResponse.redirect(`${origin}/?error=oauth`);
   }
 

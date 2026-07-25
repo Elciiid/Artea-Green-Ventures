@@ -95,27 +95,41 @@ async function loadAccount(): Promise<Account | null> {
     // env not configured yet — behave as signed-out so the login screen renders
     return null;
   }
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Everything past this point used to run unguarded — if getUser() or the
+  // profile query ever threw (a transient error, a cookie not fully synced
+  // yet right after a redirect-based flow like OAuth), the promise driving
+  // `hydrated` rejected silently and nothing ever set it, stranding the app
+  // on AppShell's loading screen forever. Found chasing a white-screen
+  // report right after the first real OAuth round-trip — that flow is the
+  // first thing in this app to depend on the browser picking up a session
+  // from cookies set by a server redirect, rather than supabase-js writing
+  // its own session directly (what signInWithPassword does), so it's the
+  // first path likely to hit a timing issue like this.
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data } = await supabase
-    .from("agv_profiles")
-    .select("id, name, role, organization_id")
-    .eq("id", user.id)
-    .single();
-  const profile = (data as ProfileRow | null) ?? null;
+    const { data } = await supabase
+      .from("agv_profiles")
+      .select("id, name, role, organization_id")
+      .eq("id", user.id)
+      .single();
+    const profile = (data as ProfileRow | null) ?? null;
 
-  // Fall back to auth metadata if the profile row isn't readable yet.
-  const meta = user.user_metadata ?? {};
-  return {
-    id: user.id,
-    email: user.email ?? "",
-    name: profile?.name ?? (meta.name as string) ?? user.email ?? "",
-    role: profile?.role ?? ((meta.role as Role) ?? "staff"),
-    organizationId: profile?.organization_id ?? "",
-  };
+    // Fall back to auth metadata if the profile row isn't readable yet.
+    const meta = user.user_metadata ?? {};
+    return {
+      id: user.id,
+      email: user.email ?? "",
+      name: profile?.name ?? (meta.name as string) ?? user.email ?? "",
+      role: profile?.role ?? ((meta.role as Role) ?? "staff"),
+      organizationId: profile?.organization_id ?? "",
+    };
+  } catch {
+    return null;
+  }
 }
 
 export type OAuthProvider = "azure";
