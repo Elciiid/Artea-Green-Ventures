@@ -6,9 +6,8 @@
 // Supabase email/password auth (Phase 10a) underneath.
 //
 // The one-click dev sign-in rows were removed for production readiness —
-// they re-authenticated with zero human interaction, incompatible with
-// Supabase's project-wide CAPTCHA protection (one master toggle, no way to
-// exempt specific callers). See session.ts's file header.
+// they re-authenticated with zero human interaction, which doesn't reflect
+// how a real user signs in. See session.ts's file header.
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -16,7 +15,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useReducedMotionPref } from "@/lib/preferences";
 import { Wordmark } from "@/components/Logo";
-import Turnstile from "@/components/Turnstile";
 import { roleHome, showDevTools, useSession } from "@/lib/session";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
@@ -32,7 +30,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (hydrated && account) router.replace(roleHome(account.role));
@@ -41,20 +38,10 @@ export default function LoginPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!turnstileToken) {
-      setError("Complete the verification challenge below.");
-      return;
-    }
     setBusy(true);
-    const { error } = await signIn(email, password, turnstileToken);
+    const { error } = await signIn(email, password);
     setBusy(false);
-    if (error) {
-      setError(
-        error.toLowerCase().includes("captcha")
-          ? "Complete the verification challenge below."
-          : "That email and password don't match an account."
-      );
-    }
+    if (error) setError("That email and password don't match an account.");
   }
 
   return (
@@ -123,11 +110,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <Turnstile
-              onVerify={setTurnstileToken}
-              onExpire={() => setTurnstileToken(null)}
-            />
-
             {error && (
               <p role="alert" className="text-xs leading-relaxed text-amber">
                 {error}
@@ -136,7 +118,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={busy || !turnstileToken}
+              disabled={busy}
               className="w-full rounded-full bg-signal py-3 text-sm font-semibold text-void transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
             >
               {busy ? "Signing in…" : "Sign In"}

@@ -3,10 +3,8 @@
 //
 // switchAccount() and the one-click login rows were removed for production
 // readiness — both re-authenticated via signInWithPassword() with zero human
-// interaction, which is fundamentally incompatible with Supabase's
-// project-wide CAPTCHA protection (one master toggle covering every sign-in,
-// no way to exempt specific callers). Real sign-in now always goes through
-// the manual form, which solves a Turnstile challenge.
+// interaction, which doesn't reflect how a real user signs in. Real sign-in
+// now always goes through the manual form.
 
 import { create } from "zustand";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -124,7 +122,7 @@ type SessionState = {
   account: Account | null;
   /** true once the initial auth state has resolved */
   hydrated: boolean;
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   _init: () => void;
   _initialized: boolean;
@@ -154,13 +152,12 @@ export const useSession = create<SessionState>((set, get) => ({
     }
   },
 
-  signIn: async (email, password, captchaToken) => {
+  signIn: async (email, password) => {
     try {
       const supabase = getSupabaseClient();
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
-        options: captchaToken ? { captchaToken } : undefined,
       });
       if (error) return { error: error.message };
       // onAuthStateChange will populate `account`.
