@@ -1,47 +1,44 @@
 # AGV Portal — Status
 Updated: 2026-07-25
-Phase: Auth hardening — CAPTCHA parked, proceeding with OAuth / rate limits / headers / dependency audit
-State: CAPTCHA cleanly backed out. App verified clean and working without it. Ready to resume the rest of the auth-hardening scope.
+Phase: Auth hardening — Batch C (OAuth). Azure/Microsoft wired and code-verified; Google not started.
+State: Azure OAuth code is in and passes build/lint/typecheck. A live privilege-escalation hole found along the way is fixed and verified. Real end-to-end Microsoft sign-in still needs a manual pass in an external browser (Chrome/Edge/Firefox) — not tested here, see Known issues.
 
 ## Done this session
-- **Backed out the Turnstile CAPTCHA integration** built in the prior session (Batch B). Not cancelled — parked, because local testing kept crashing Claude Desktop's embedded Browser pane against a real Turnstile challenge even after the previous session routed verification through curl instead of the browser. Rather than keep losing time to that tooling issue, removed it cleanly so the rest of the auth-hardening pass (OAuth, rate limits, headers, dependency audit — none of which depend on CAPTCHA) can proceed.
-- **Nothing was uncommitted going into this** — the prior session's CAPTCHA work was already fully committed (`8002ebc`, `6c84cf0`, `b2481f1`, plus the `13a8164` STATUS.md update), so the "commit first" step was a no-op by the time this one started. That history is exactly where this work is recoverable from if/when CAPTCHA comes back into scope.
-- **Removed from the live tree** (commit `e0734b6`):
-  - `src/components/Turnstile.tsx` — the shared widget component, deleted outright.
-  - `src/app/signup/page.tsx` — `turnstileToken` state, the widget render, the submit gate, and `turnstileToken` in the POST body.
-  - `src/app/page.tsx` (sign-in) — same pattern: token state, widget render, submit gate, and the CAPTCHA-specific error-copy branch.
-  - `src/lib/session.ts` — `signIn()` reverted to `(email, password)`, no `captchaToken` param; header comment's CAPTCHA justification for removing quick-switch login reworded (the removal itself still stands — the underlying problem was zero-human-interaction auth, not CAPTCHA specifically).
-  - `src/app/api/auth/signup/route.ts` — `turnstileToken` removed from the request body, the "complete the challenge" validation gate, `captchaToken` from the staff branch's `signUp()` call, and `captchaToken` from the client branch's post-creation `signInWithPassword()` call. Kept the client branch's create-then-sign-in-then-rollback shape as-is, since that pattern exists independently of CAPTCHA — `createUser()` doesn't return a session, so signing in immediately (and rolling back on failure) is how the browser gets a session either way. Only the CAPTCHA-specific token and the CAPTCHA-flavored error message came out.
-  - `.env.example` and `.env.local` — `NEXT_PUBLIC_TURNSTILE_SITE_KEY` removed from both.
-- **Left alone, on purpose** (per this task's own hard constraints): `next.config.ts`'s CSP still allows `challenges.cloudflare.com` in `script-src`/`connect-src`/`frame-src` — that's headers-track work (Batch A), out of scope here, and an unused CSP allowance isn't a functional problem. Also left `supabase/config.toml`'s commented-out `[auth.captcha]` block untouched — that's Supabase's own CLI scaffold template for self-hosting, predates this project's CAPTCHA work entirely, and was never something we added.
-- **Supabase's Captcha Protection setting**: confirmed already disabled — see Verification below. Nothing further needed there.
 
-## Verification
-- `grep -riE "turnstile|captcha"` across the repo (excluding `STATUS.md`, which is history/documentation): only the two intentionally-preserved references above remain. No dangling code references anywhere.
-- `npx tsc --noEmit` — clean.
-- `npm run lint` — clean.
-- `npm run build` — succeeds (the one warning is a pre-existing, unrelated AVIF-image note, not CAPTCHA-related).
-- **End-to-end, headless** (`npm run dev`, no browser attached, all via curl):
-  - Confirmed Supabase's Captcha Protection is currently off: a bogus-credentials sign-in attempt against Supabase's Auth API directly returns `invalid_credentials`, not `captcha_failed` — meaning no leftover server-side requirement would break signup/sign-in now that the frontend no longer sends a token.
-  - Ran a real signup through `/api/auth/signup` for both branches: staff (`@arteagreenventures.com`) returned `{"pendingConfirmation":true}` as expected (email confirmation, unrelated to CAPTCHA); client (any other domain) returned `HTTP 200` with a live session, no token required anywhere in the request.
-  - Signed in as the newly created client account directly against Supabase's Auth API (mirrors what `session.ts`'s `signIn()` now does) — `HTTP 200`, valid session back.
-  - Deleted both test accounts afterward via the Admin API; nothing test-related left behind in the project.
+### Critical fix: self-service role escalation (unrelated to OAuth, found while building it)
+- `agv_profiles`'s own-row UPDATE policy (`auth.uid() = id`) checked row ownership only, not which columns changed. Any signed-in user — including a brand-new self-registered signup — could PATCH their own `role` straight to `'admin'` from the browser with two lines of JS. Predates this session entirely; every account was exposed to it.
+- Fixed with a `BEFORE UPDATE` trigger (`agv_prevent_self_role_escalation`) that rejects any change to `role`/`organization_id` unless the actor is already an admin or has no JWT subject at all (the service-role key's signature) — migration `supabase/migrations/20260725100000_prevent_role_escalation.sql`, applied directly by the user via the Supabase SQL editor, migration file committed at `7fbf57a`.
+- Verified via curl against the live project: a fresh test account's self-escalation attempt now returns `400` / `"Only admins may change role or organization_id."`; a legitimate self-update (name) still returns `200`. Confirmed the stored role stayed `client` throughout, test account deleted afterward.
+
+### Azure (Microsoft) OAuth
+- **Azure app registration** (user-side, in the Azure Portal): multi-tenant + personal accounts (`Accounts in any organizational directory and personal Microsoft accounts`), redirect URI `https://bcblmpwguqmouqxdswxj.supabase.co/auth/v1/callback`, client secret created. Client ID: `aaedca45-553e-4783-9b06-68064a49fafc`.
+- **Supabase provider config** (user-side, dashboard → Authentication → Providers → Azure): enabled, Client ID + Secret entered, **Azure Tenant URL left blank** (blank = Supabase's `common` endpoint = any tenant + personal accounts, matching the multi-tenant registration above — typing `common` literally is rejected as "not a valid URL").
+- **Design decision — multi-tenant, not staff-only**: chosen deliberately so clients can also authenticate with their own Microsoft accounts, as a real proof-of-mailbox-ownership signal the existing client signup path (`admin.createUser({ email_confirm: true })`) doesn't provide today. Known gap: this only covers clients who happen to use a Microsoft account — Gmail/other clients still go through the unverified password path. Not fixed this session; flagged as a possible follow-up (a Google provider, or switching the password client-path to a real confirmation email).
+- **Code**:
+  - `src/lib/session.ts` — added `signInWithOAuth(provider)`, currently typed to `"azure"` only (extendable when Google is added). Redirects to `${origin}/auth/callback`.
+  - `src/app/auth/callback/route.ts` (new) — exchanges the OAuth `code` for a session using `@supabase/ssr`'s cookie-backed server client (already a dependency; same package `client.ts` uses). Since Azure is now multi-tenant, it can no longer be trusted to imply staff — so on a **brand-new account only** (detected via `created_at` ≈ `last_sign_in_at`, within 30s), the callback resolves role by email domain and corrects `agv_profiles.role` using the service-role client (the one legitimate exception to the RLS fix above — service-role requests have no JWT subject, which the trigger explicitly allows through). Deliberately does **not** touch role on later logins, so an admin (or anyone else with a manually-set role) who later chooses "Continue with Microsoft" instead of a password can't get silently downgraded.
+  - `src/app/page.tsx` and `src/app/signup/page.tsx` — added a "Continue with Microsoft" button (own Microsoft-brand icon, no new dependency) below the existing form on both. Sign-in page also picks up `?error=oauth` (set by the callback on any failure) and shows an inline error, same visual language as the password-path errors.
+- **Verification done**: `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean (`/auth/callback` builds as a dynamic route, as expected for a Route Handler). Confirmed via the dev server that both buttons render correctly (accessibility tree, not a click-through) on `/` and `/signup`.
+- **Verification NOT done / can't be done here**: the actual Microsoft login screen. Per the standing rule from the CAPTCHA work, Claude Desktop's embedded Browser pane isn't used for pages that hand off to a real external identity provider — clicking "Continue with Microsoft" through it isn't something this session attempted. See Next step.
 
 ## Files added/changed
-- `src/components/Turnstile.tsx` — deleted.
-- `src/app/signup/page.tsx`, `src/app/page.tsx`, `src/lib/session.ts`, `src/app/api/auth/signup/route.ts`, `.env.example` — CAPTCHA wiring stripped.
-- `.env.local` — site-key line removed (gitignored, not part of the commit).
-- `STATUS.md` — this entry.
+- `supabase/migrations/20260725100000_prevent_role_escalation.sql` — new, committed `7fbf57a`.
+- `src/app/auth/callback/route.ts` — new.
+- `src/lib/session.ts`, `src/app/page.tsx`, `src/app/signup/page.tsx` — OAuth button + `signInWithOAuth` wiring.
 
 ## Decisions made
-- Parked rather than deleted-from-history: everything is one `git revert`/checkout away from `e0734b6`'s parent if CAPTCHA comes back into scope, since the prior session's build-out is intact in earlier commits.
-- Kept the client-signup branch's create→sign-in→rollback shape rather than simplifying it further, since that structure serves a real non-CAPTCHA purpose (session bootstrapping after an Admin API creation call that returns no session).
+- Multi-tenant Azure (any org + personal accounts), not staff-only single-tenant — see "Design decision" above.
+- Role is resolved from email domain only at first-ever OAuth login, never re-derived on subsequent logins, to avoid clobbering an admin's role if they later use Microsoft sign-in.
+- The RLS fix's allowance for "no JWT subject" (service-role requests) rather than a narrower allowlist — matches how every other server-side privileged write in this app already works (`getSupabaseServiceClient()`), no new pattern introduced.
 
 ## Known issues / TODO
-None outstanding for CAPTCHA specifically. The Desktop Browser pane / Turnstile crash issue is now moot for this codebase since no page renders a Turnstile widget anymore — but worth remembering if CAPTCHA is reintroduced later, since the underlying tooling issue itself wasn't resolved, just avoided by removing the trigger.
+- **Not yet tested end-to-end**: a real "Continue with Microsoft" click, through both an AGV account and a non-AGV Microsoft account, needs to happen in a real external browser (Chrome/Edge/Firefox) — confirming: (a) the redirect round-trip actually completes, (b) an AGV email lands as staff at `/home`, (c) a non-AGV Microsoft/personal account lands as client at `/portal`, (d) the account's `agv_profiles.role` is correct afterward.
+- **Supabase redirect URL allowlist**: Authentication → URL Configuration → Redirect URLs needs `http://localhost:3170/auth/callback` added for local dev (this app's dev port, per `.claude/launch.json` — not 3000), plus the production domain's `/auth/callback` once deployed. Not yet confirmed done.
+- **Client email-verification gap**: multi-tenant Microsoft OAuth only proves mailbox ownership for clients who use a Microsoft account; other clients still go through the zero-verification password path. Flagged, not addressed.
+- Google OAuth (the other half of Batch C) not started.
 
 ## Blocked on / needs a decision
-Nothing. Clear to proceed.
+Needs the user to: (1) add the redirect URLs to Supabase's allowlist if not already done, (2) run the real end-to-end Microsoft sign-in test in an external browser and report back what happened, (3) confirm whether to proceed to Google OAuth next or hold until Azure is confirmed working live.
 
 ## Next step
-Move on to the rest of the auth-hardening scope — OAuth (needs your Azure/Google app registrations), the rate-limit table from Batch A (needs you to apply it in the Supabase dashboard), and the dependency-audit follow-up (re-run `npm audit` before deploy until Next.js patches the remaining findings). Let me know which to pick up first, or if you'd like all three proceeding in whatever order fits your available time.
+User runs the real Microsoft sign-in test (both an AGV account and a personal/other-org Microsoft account) in Chrome/Edge/Firefox against `http://localhost:3170`, reports results back. Once Azure is confirmed working, move on to Google OAuth using the same pattern (`signInWithOAuth`, same callback route, extend the `OAuthProvider` type).

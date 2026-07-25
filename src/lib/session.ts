@@ -118,11 +118,15 @@ async function loadAccount(): Promise<Account | null> {
   };
 }
 
+export type OAuthProvider = "azure";
+
 type SessionState = {
   account: Account | null;
   /** true once the initial auth state has resolved */
   hydrated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** Redirects the browser to the provider's login — resolves only on failure. */
+  signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   _init: () => void;
   _initialized: boolean;
@@ -161,6 +165,23 @@ export const useSession = create<SessionState>((set, get) => ({
       });
       if (error) return { error: error.message };
       // onAuthStateChange will populate `account`.
+      return { error: null };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Auth is not configured." };
+    }
+  },
+
+  signInWithOAuth: async (provider) => {
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      // On success the browser is already navigating to the provider — there's
+      // no session to populate yet. onAuthStateChange picks it up after
+      // /auth/callback exchanges the code and redirects back.
+      if (error) return { error: error.message };
       return { error: null };
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Auth is not configured." };

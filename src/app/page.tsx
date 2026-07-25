@@ -17,6 +17,17 @@ import { useReducedMotionPref } from "@/lib/preferences";
 import { Wordmark } from "@/components/Logo";
 import { roleHome, showDevTools, useSession } from "@/lib/session";
 
+function MicrosoftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 21 21" aria-hidden="true">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+    </svg>
+  );
+}
+
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function LoginPage() {
@@ -25,15 +36,28 @@ export default function LoginPage() {
   const account = useSession((s) => s.account);
   const hydrated = useSession((s) => s.hydrated);
   const signIn = useSession((s) => s.signIn);
+  const signInWithOAuth = useSession((s) => s.signInWithOAuth);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState(false);
 
   useEffect(() => {
     if (hydrated && account) router.replace(roleHome(account.role));
   }, [hydrated, account, router]);
+
+  useEffect(() => {
+    // /auth/callback bounces failures back here with this marker — success
+    // never carries a query string at all, since it lands via a session
+    // cookie the effect above then picks up.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "oauth") {
+      setError("Something went wrong signing in with Microsoft. Try again.");
+      router.replace("/");
+    }
+  }, [router]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -42,6 +66,17 @@ export default function LoginPage() {
     const { error } = await signIn(email, password);
     setBusy(false);
     if (error) setError("That email and password don't match an account.");
+  }
+
+  async function onMicrosoft() {
+    setError(null);
+    setOauthBusy(true);
+    const { error } = await signInWithOAuth("azure");
+    if (error) {
+      setError(error);
+      setOauthBusy(false);
+    }
+    // On success the browser is already navigating away — nothing else to do.
   }
 
   return (
@@ -124,6 +159,22 @@ export default function LoginPage() {
               {busy ? "Signing in…" : "Sign In"}
             </button>
           </form>
+
+          <div className="mt-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-ash/20" />
+            <span className="text-label font-semibold uppercase tracking-[0.14em] text-ash">or</span>
+            <div className="h-px flex-1 bg-ash/20" />
+          </div>
+
+          <button
+            type="button"
+            onClick={onMicrosoft}
+            disabled={oauthBusy}
+            className="mt-5 flex w-full items-center justify-center gap-2.5 rounded-full border border-ash/20 bg-white/50 py-3 text-sm font-semibold text-bone transition hover:bg-white/70 active:scale-[0.99] disabled:opacity-60"
+          >
+            <MicrosoftIcon />
+            {oauthBusy ? "Redirecting…" : "Continue with Microsoft"}
+          </button>
         </motion.div>
 
         <div className="space-y-1.5 text-center text-sm text-ash">

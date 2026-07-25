@@ -23,13 +23,25 @@ import { motion } from "framer-motion";
 import { useReducedMotionPref } from "@/lib/preferences";
 import { Wordmark } from "@/components/Logo";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { roleHome } from "@/lib/session";
+import { roleHome, useSession } from "@/lib/session";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+function MicrosoftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 21 21" aria-hidden="true">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+    </svg>
+  );
+}
 
 export default function SignUpPage() {
   const router = useRouter();
   const reduced = useReducedMotionPref();
+  const signInWithOAuth = useSession((s) => s.signInWithOAuth);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,6 +50,18 @@ export default function SignUpPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState(false);
+
+  async function onMicrosoft() {
+    setError(null);
+    setOauthBusy(true);
+    const { error } = await signInWithOAuth("azure");
+    if (error) {
+      setError(error);
+      setOauthBusy(false);
+    }
+    // On success the browser is already navigating away — nothing else to do.
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -215,6 +239,26 @@ export default function SignUpPage() {
                 {busy ? "Creating account…" : "Create account"}
               </button>
             </form>
+          )}
+
+          {!pendingConfirmation && (
+            <>
+              <div className="mt-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-ash/20" />
+                <span className="text-label font-semibold uppercase tracking-[0.14em] text-ash">or</span>
+                <div className="h-px flex-1 bg-ash/20" />
+              </div>
+
+              <button
+                type="button"
+                onClick={onMicrosoft}
+                disabled={oauthBusy}
+                className="mt-5 flex w-full items-center justify-center gap-2.5 rounded-full border border-ash/20 bg-white/50 py-3 text-sm font-semibold text-bone transition hover:bg-white/70 active:scale-[0.99] disabled:opacity-60"
+              >
+                <MicrosoftIcon />
+                {oauthBusy ? "Redirecting…" : "Continue with Microsoft"}
+              </button>
+            </>
           )}
         </motion.div>
 
