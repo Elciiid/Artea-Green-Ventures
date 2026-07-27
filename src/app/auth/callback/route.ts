@@ -18,6 +18,18 @@
 // anon/authenticated path is now blocked from touching its own role column
 // (see the 20260725100000 migration) — by design, this is the one
 // legitimate server-side exception to that block.
+//
+// xms_edov ("Email Domain Owner Verified"): an email domain match alone is
+// NOT proof of staff — this is exactly the pattern the real, named nOAuth
+// vulnerability class exploits, since a Microsoft account's email address
+// isn't guaranteed to come from a verified domain. xms_edov is Azure's own
+// answer: an ID-token claim (added via Token configuration → optional
+// claims) that says whether the tenant actually owns/verified the domain
+// behind this email, not just that the string after the @ matches. Confirmed
+// empirically (2026-07-27, real login) that Supabase's Azure provider copies
+// it straight into user_metadata.custom_claims.xms_edov once Azure is
+// configured to send it — no raw ID-token decoding needed. Absence of the
+// claim is treated the same as an explicit false: fail closed, not open.
 
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -78,7 +90,38 @@ export async function GET(request: Request) {
 
   if (isNewAccount) {
     const domain = user.email?.toLowerCase().split("@")[1] ?? "";
-    const role = domain === ALLOWED_STAFF_DOMAIN ? "staff" : "client";
+    const domainMatches = domain === ALLOWED_STAFF_DOMAIN;
+
+    if (domainMatches) {
+      const customClaims = user.user_metadata?.custom_claims as
+        | Record<string, unknown>
+        | undefined;
+      const domainVerified = customClaims?.xms_edov === true;
+
+      if (!domainVerified) {
+        // Fail closed: missing/false/absent all mean "not verified" — never
+        // assume absence is fine. Delete the account GoTrue just created
+        // rather than leave a domain-matched-but-unverified account sitting
+        // around with an ambiguous role — same "create then roll back on
+        // failure" shape the client-signup route already uses elsewhere in
+        // this app. Note we deliberately return a fresh redirect here
+        // instead of `response`: `response` already has this session's
+        // Set-Cookie headers staged on it from exchangeCodeForSession above,
+        // and since the account is being deleted, that session must never
+        // reach the browser at all.
+        console.error(
+          "[auth/callback] rejecting domain-matched OAuth signup — xms_edov not verified:",
+          user.email,
+          "custom_claims:",
+          JSON.stringify(customClaims)
+        );
+        const admin = getSupabaseServiceClient();
+        await admin.auth.admin.deleteUser(user.id);
+        return NextResponse.redirect(`${origin}/?error=oauth_unverified_domain`);
+      }
+    }
+
+    const role = domainMatches ? "staff" : "client";
     const admin = getSupabaseServiceClient();
     await admin.from("agv_profiles").update({ role }).eq("id", user.id);
   }

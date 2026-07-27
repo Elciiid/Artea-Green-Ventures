@@ -49,11 +49,17 @@ export default function LoginPage() {
   }, [hydrated, account, router]);
 
   useEffect(() => {
-    // /auth/callback bounces failures back here with this marker — success
+    // /auth/callback bounces failures back here with these markers — success
     // never carries a query string at all, since it lands via a session
     // cookie the effect above then picks up.
     const params = new URLSearchParams(window.location.search);
-    if (params.get("error") === "oauth") {
+    const oauthError = params.get("error");
+    if (oauthError === "oauth_unverified_domain") {
+      setError(
+        "We couldn't verify your Microsoft account's email domain. Please create an account with your work email and a password instead."
+      );
+      router.replace("/");
+    } else if (oauthError === "oauth") {
       setError("Something went wrong signing in with Microsoft. Try again.");
       router.replace("/");
     }
