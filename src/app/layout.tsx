@@ -4,6 +4,7 @@ import "./globals.css";
 import SupabaseAuthListener from "@/components/SupabaseAuthListener";
 import DemoBanner from "@/components/DemoBanner";
 import AxeReporter from "@/components/dev/AxeReporter";
+import { Toaster } from "@/components/ui/sonner";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -56,6 +57,7 @@ export default function RootLayout({
         {process.env.NODE_ENV === "development" && <AxeReporter />}
         <DemoBanner />
         {children}
+        <Toaster position="bottom-center" />
       </body>
     </html>
   );
