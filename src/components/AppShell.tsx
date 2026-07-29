@@ -69,10 +69,12 @@ const HOME_ITEM: NavItem = {
   match: (p) => p === "/home" || p.startsWith("/home/"),
 };
 
-// Only surfaced in the Menu dropdown, not the desktop pill nav — Directory
+// Only surfaced in the mobile nav Sheet, not the desktop pill nav — Directory
 // is already reachable from Home's tile row, so it doesn't need a top-level
-// slot next to Home/Applications, but the Menu is a reasonable second path
-// to it now that the hero photo no longer links there directly.
+// slot next to Home/Applications. Since the Sheet's trigger is lg:hidden, at
+// desktop widths Home's tile row is the only path to Directory; the old
+// always-visible Menu button used to cover that gap too, before it became
+// mobile-only.
 const DIRECTORY_ITEM: NavItem = {
   href: "/home/directory",
   label: "Staff directory",
@@ -168,7 +170,7 @@ export default function AppShell({
                   Menu
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="glass w-72 border-ash/20 backdrop-blur-xl">
+              <SheetContent side="left" className="glass data-[side=left]:w-72 backdrop-blur-xl">
                 <SheetHeader>
                   <SheetTitle className="font-display text-bone">Navigation</SheetTitle>
                   <SheetDescription className="sr-only">
@@ -209,7 +211,7 @@ export default function AppShell({
                   {account.name.charAt(0)}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass w-60 border-ash/20 backdrop-blur-xl">
+              <DropdownMenuContent align="end" className="glass w-60 backdrop-blur-xl">
                 <DropdownMenuLabel className="px-3 py-2 font-normal">
                   <p className="text-sm font-medium text-bone">{account.name}</p>
                   <p className="mt-1 inline-block rounded-full border border-ash/30 px-2 py-0.5 text-label uppercase tracking-[0.12em] text-ash">
@@ -222,7 +224,7 @@ export default function AppShell({
                 </DropdownMenuItem>
                 {showDevTools() && account.role === "admin" && (
                   <DropdownMenuItem
-                    onSelect={resetDemo}
+                    onSelect={() => resetDemo()}
                     title="Undo every change and put the demo back to how it started"
                     className="text-ash focus:text-amber"
                   >
