@@ -192,7 +192,6 @@ function MfaSection({ account }: { account: Account }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -220,7 +219,6 @@ function MfaSection({ account }: { account: Account }) {
 
   async function startEnroll() {
     setError(null);
-    setNotice(null);
     setBusy(true);
     try {
       const supabase = getSupabaseClient();
@@ -270,7 +268,7 @@ function MfaSection({ account }: { account: Account }) {
       }
       setPending(null);
       setCode("");
-      setNotice("Authenticator app added.");
+      toast.success("Authenticator app added.");
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
@@ -297,13 +295,12 @@ function MfaSection({ account }: { account: Account }) {
 
   async function remove(factorId: string) {
     setError(null);
-    setNotice(null);
     setBusy(true);
     try {
       const supabase = getSupabaseClient();
       const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId });
       if (unenrollError) throw unenrollError;
-      setNotice("Authenticator app removed.");
+      toast.success("Authenticator app removed.");
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't remove that key.");
@@ -387,13 +384,13 @@ function MfaSection({ account }: { account: Account }) {
                     {pending.secret}
                   </p>
 
-                  <label
+                  <Label
                     htmlFor="mfa-code"
                     className="mt-4 block text-label font-semibold uppercase tracking-[0.14em] text-ash"
                   >
                     6-digit code
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="mfa-code"
                     inputMode="numeric"
                     autoComplete="one-time-code"
@@ -404,7 +401,7 @@ function MfaSection({ account }: { account: Account }) {
                       setError(null);
                     }}
                     placeholder="000000"
-                    className="mt-1.5 w-40 rounded-md border border-ash/20 bg-void/70 px-3.5 py-2.5 font-mono text-sm tracking-[0.3em] text-bone outline-none transition placeholder:text-ash focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
+                    className="mt-1.5 w-40 border-ash/20 bg-void/70 font-mono tracking-[0.3em]"
                   />
                 </div>
               </div>
@@ -438,11 +435,6 @@ function MfaSection({ account }: { account: Account }) {
               {error && (
                 <p role="alert" className="mb-3 text-xs leading-relaxed text-amber">
                   {error}
-                </p>
-              )}
-              {notice && (
-                <p role="status" className="mb-3 text-xs leading-relaxed text-contour">
-                  {notice}
                 </p>
               )}
               <button
