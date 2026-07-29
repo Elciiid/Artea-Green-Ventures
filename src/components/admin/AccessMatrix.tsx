@@ -9,7 +9,7 @@
 // holds rather than assuming the click succeeded.
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useReducedMotionPref } from "@/lib/preferences";
 import {
   fetchApplicationsForAccess,

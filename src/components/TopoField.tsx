@@ -12,7 +12,7 @@ import {
   motion,
   useMotionValue,
   useSpring,
-} from "framer-motion";
+} from "motion/react";
 import { useReducedMotionPref } from "@/lib/preferences";
 import { contourPaths, type Peak } from "@/lib/topo";
 

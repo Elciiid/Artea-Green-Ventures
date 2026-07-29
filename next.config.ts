@@ -7,7 +7,7 @@ import type { NextConfig } from "next";
 // That's a much bigger, more invasive change than "add security headers,"
 // and this project's standing rule is to preserve everything else
 // untouched. The trade-off is 'unsafe-inline' on script-src/style-src
-// (style-src also needs it regardless, for Framer Motion's runtime inline
+// (style-src also needs it regardless, for Motion's runtime inline
 // styles) — a real, disclosed reduction in XSS defense versus a strict
 // nonce-based CSP, not a silent one. See STATUS.md.
 //

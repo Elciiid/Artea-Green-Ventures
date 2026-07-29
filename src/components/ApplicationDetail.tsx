@@ -13,7 +13,7 @@
 // StatusChip's 3-tier semantics.
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { useReducedMotionPref } from "@/lib/preferences";
 import StatusChip from "@/components/StatusChip";
 import TopoPlate from "@/components/TopoPlate";

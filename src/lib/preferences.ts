@@ -6,7 +6,7 @@
 // is a baseline accessibility behavior, not a removed feature, so it's kept
 // as a direct OS-setting read, with no local override to manage.
 
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "motion/react";
 
 /** Whether motion should be reduced right now, per the OS setting. */
 export function useReducedMotionPref(): boolean {
