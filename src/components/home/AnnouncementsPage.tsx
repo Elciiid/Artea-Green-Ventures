@@ -6,11 +6,15 @@
 // account.role === "admin" so staff never sees a control they'd be rejected
 // for using, but RLS is the real boundary either way.
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useSession } from "@/lib/session";
 import { fetchAnnouncements, createAnnouncement, type Announcement } from "@/lib/supabase/home";
 import HomeShell, { HomePanel } from "@/components/home/HomeShell";
 import { formatDate } from "@/lib/format";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type LoadState =
   | { status: "loading" }
@@ -23,15 +27,6 @@ export default function AnnouncementsPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [posting, setPosting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | undefined>(undefined);
-
-  function showToast(msg: string) {
-    setToast(msg);
-    window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
-  }
-  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   function load() {
     let cancelled = false;
@@ -64,8 +59,9 @@ export default function AnnouncementsPage() {
       setTitle("");
       setBody("");
       load();
+      toast.success("Announcement posted.");
     } catch (err) {
-      showToast(err instanceof Error ? `Couldn't post: ${err.message}` : "Couldn't post the announcement.");
+      toast.error(err instanceof Error ? `Couldn't post: ${err.message}` : "Couldn't post the announcement.");
     } finally {
       setPosting(false);
     }
@@ -77,22 +73,34 @@ export default function AnnouncementsPage() {
         {account?.role === "admin" && (
           <HomePanel title="Post an announcement">
             <form onSubmit={onSubmit} className="flex flex-col gap-3">
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Title"
-                className="rounded-lg border border-ash/20 bg-void/40 px-3 py-2 text-sm text-bone placeholder:text-ash focus:border-signal focus:outline-none"
-              />
-              <textarea
-                required
-                rows={4}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="What's happening?"
-                className="rounded-lg border border-ash/20 bg-void/40 px-3 py-2 text-sm text-bone placeholder:text-ash focus:border-signal focus:outline-none"
-              />
+              <div>
+                <Label htmlFor="announcement-title" className="sr-only">
+                  Title
+                </Label>
+                <Input
+                  id="announcement-title"
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title"
+                  className="bg-void/40"
+                />
+              </div>
+              <div>
+                <Label htmlFor="announcement-body" className="sr-only">
+                  What&apos;s happening?
+                </Label>
+                <Textarea
+                  id="announcement-body"
+                  required
+                  rows={4}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="What's happening?"
+                  className="bg-void/40"
+                />
+              </div>
               <button
                 type="submit"
                 disabled={posting}
@@ -125,18 +133,6 @@ export default function AnnouncementsPage() {
             </ul>
           )}
         </HomePanel>
-      </div>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-        {toast && (
-          <div
-            role="alert"
-            className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-ash/20 bg-pine px-5 py-2.5 shadow-[var(--shadow-pop)]"
-          >
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-signal" />
-            <span className="text-xs text-bone">{toast}</span>
-          </div>
-        )}
       </div>
     </HomeShell>
   );
