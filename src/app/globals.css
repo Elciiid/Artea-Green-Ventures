@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/* ---break---
+ */
+@custom-variant dark (&:is(.dark *));
 
 /* AGV Home design tokens (Phase 19 whole-app reskin) — warm green/cream
  * identity, matching a supplied reference composition exactly (recolored
@@ -164,5 +169,74 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+/* ---break---
+ */
+@theme inline {
+  --font-heading: var(--font-display);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* shadcn/Kokonut semantic tokens, bridged onto AGV's own palette — no new
+   colors. AGV has one fixed light identity (Phase 19), so there is no .dark
+   block: `dark` is repointed from the OS media query to a `.dark` class
+   below, one that's never applied anywhere, which is what keeps any
+   dark:-prefixed utility a Kokonut component ships from firing off the
+   user's OS color-scheme setting. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: var(--color-void);
+  --foreground: var(--color-bone);
+  --card: var(--color-pine);
+  --card-foreground: var(--color-bone);
+  --popover: var(--color-pine);
+  --popover-foreground: var(--color-bone);
+  --primary: var(--color-signal);
+  --primary-foreground: var(--color-void);
+  --secondary: var(--color-pine);
+  --secondary-foreground: var(--color-bone);
+  --muted: var(--color-void);
+  --muted-foreground: var(--color-ash);
+  --accent: var(--color-contour);
+  --accent-foreground: var(--color-void);
+  --destructive: var(--color-amber);
+  --border: var(--color-ash);
+  --input: var(--color-ash);
+  --ring: var(--color-signal);
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
