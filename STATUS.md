@@ -1,46 +1,46 @@
 # AGV Portal — Status
-Updated: 2026-07-27
-Phase: xms_edov verification for Microsoft OAuth
-State: Complete. Staff-role assignment via Microsoft OAuth now requires both a matching email domain AND Azure's xms_edov claim confirming that domain is actually verified — not just self-reported. Verified against a real login for the success path; the rejection path is verified by code trace only (see Known issues for why a live spoof isn't constructible here).
+Updated: 2026-07-30
+Phase: Kokonut UI Adoption — Slices 0–4 complete (of 7 planned)
+State: On track. Visual foundation (Slice 0) plus four feature-surface migrations (Slices 1–4) landed, each with its own plan, subagent-driven execution, live browser verification, and a final whole-branch review. Nothing pushed. A separate, unrelated "July 31 Tier 1" batch of work (role assignment, activity log, a DB migration) remains uncommitted in the working tree from before this phase started and has been deliberately left untouched throughout — see "Known issues / TODO" below.
 
-## Done this session
+## Done this session (and the session before it)
 
-### Step 1 — investigated before building (per the task's own instruction)
-Checked whether Supabase surfaces `xms_edov` at all before assuming an approach:
-- First checked a real, already-existing Azure-authenticated user (`jonas@arteagreenventures.com`, logged in before this session) via the Admin API. Its `user_metadata.custom_claims` contained only `{ email, tid }` — no generic pass-through of ID-token claims, just a curated set GoTrue's Azure provider extracts. `xms_edov` wasn't there, but it also wasn't being issued by Azure yet at that point, so this alone didn't answer the question.
-- Added temporary probe logging in `auth/callback/route.ts` to capture `user_metadata.custom_claims` and check for a raw provider ID token via `session.provider_token` (in case a fallback to manual JWT decoding was needed).
-- After adding `xms_edov` as an ID-token optional claim in Azure (Token configuration — hit the documented "claim is invalid" UI warning, which is a known, safe-to-ignore Azure Portal bug) and doing one more real login: **`user_metadata.custom_claims.xms_edov` came through as `true`.** Confirmed empirically, not assumed. This meant the manual-JWT-decode fallback plan wasn't needed — Supabase already surfaces it in the same place as the other custom claims.
-- Removed the temporary probe logging once this was confirmed.
+### Slice 0 — Foundation (7 commits: 3319ac3, 8b595c5, 60dbdc5, eb054d3, d8ea857, 430f0f7, 6165694)
+Migrated tooling from Framer Motion to `motion`, set up shadcn/ui on the `radix-vega` preset (switched from an initial `nova` trial after empirically diffing both presets' output) plus Kokonut UI as a secondary registry in `components.json`, and built a token bridge in `globals.css` mapping shadcn's expected CSS variables onto AGV's existing locked color palette — verified live via `getComputedStyle()` that every shadcn color token resolves to an exact existing AGV token, not a new color. Final review found and fixed two real theming bugs (`--muted`/`--background` colliding, `--destructive-foreground` missing entirely).
 
-### Step 2 — Azure configuration (user-side)
-`xms_edov` added as an ID-token optional claim in the app registration's Token configuration, same place as `email`. Confirmed working via the real login above.
+### Slice 1 — Shell & Navigation (5 commits: 7d6f713, 1fc895f, 1caed5c, dd64d6d, 840fe1b)
+Rebuilt `AppShell.tsx`'s mobile nav on shadcn `Sheet` and the account menu on shadcn `DropdownMenu`, removing ~40 lines of hand-rolled focus-trap/escape-key/outside-click logic. Also fixed a real redundancy bug (mobile hamburger and desktop pill-nav both visible at the same breakpoint). Rejected Kokonut's own branded nav components (`smooth-drawer`, `profile-dropdown`, `morphic-navbar`) as unsuitable — all three are demo compositions with hardcoded content, not generic primitives.
 
-### Step 3 — verification logic
-`src/app/auth/callback/route.ts`, inside the existing `isNewAccount` branch (same point the domain check already happened):
-- If the email domain matches `arteagreenventures.com`, additionally require `user.user_metadata?.custom_claims?.xms_edov === true`.
-- Any other value — `false`, missing entirely, `undefined` — is treated as unverified. The check is a strict `=== true` comparison, so absence and explicit-false both fail the same way; there's no separate "unknown" branch that defaults to trusting it.
-- On failure: the just-created account is deleted via the service-role client (`admin.auth.admin.deleteUser`), and the response redirects to `/?error=oauth_unverified_domain` — deliberately a **fresh** `NextResponse.redirect`, not the `response` object exchangeCodeForSession had already staged Set-Cookie headers onto, so the about-to-be-deleted account's session cookie never reaches the browser at all.
-- Non-AGV-domain sign-ins are completely untouched — the whole check is inside the `domainMatches` branch, so a personal/other-company Microsoft account still resolves to `client` exactly as before.
-- `src/app/page.tsx` — added a specific error message for `?error=oauth_unverified_domain` (distinct from the generic `?error=oauth`), directing the person to sign up with email/password instead.
-- Kept the diagnostic `console.error` logging pattern (per the task's instruction) on the rejection path — logs the email and the raw `custom_claims` object, so a future case that hits this is diagnosable the same way the earlier Azure setup failures were.
+### Slice 2 — Home Hub Surfaces (3 commits: aa1e210, cc6e54a, f3d56ca)
+Scoped down from the roadmap's stated 4 surfaces to just Announcements (the other 3 needed zero changes — documented as a finding, not skipped). Replaced hand-rolled toast state with `sonner`, migrated the form to shadcn `Input`/`Textarea`/`Label`. Added genuinely new user-facing feedback (a success toast on posting) that didn't exist before.
 
-## Files added/changed
-- `src/app/auth/callback/route.ts` — xms_edov check added inside the existing domain-match branch; temporary probe logging added then removed.
-- `src/app/page.tsx` — new specific error copy for the unverified-domain rejection case.
+### Slice 3 — Account Settings (4 commits: e63d246, ea7e7af, a032371, 45e3ef0)
+Migrated `AccountSettings.tsx`'s password and MFA sections to shadcn `Input`/`Label` plus `sonner` toasts. Zero changes to any Supabase Auth call (`signInWithPassword`, `updateUser`, `mfa.enroll`/`challengeAndVerify`/`unenroll`) — independently verified byte-identical by review. Verified MFA end-to-end using a freshly signed-up (non-seed) account and a real computed TOTP code. Fixed a real, wide-reaching `cn()` bug where the custom `text-label` font-size token was silently losing to color classes in the same className (affects 60+ call sites app-wide).
+
+### Slice 4 — Applications Register (3 commits: dfed97f, 555ff9c, 3cfd2b3)
+Migrated the shared sortable table (used by both admin and portal views) to shadcn `Table`, with zero changes to sort logic. Caught and fixed a padding-override trap (`TableCell`'s shorthand `p-2` silently surviving overrides) before it shipped, verified live via `getComputedStyle()`. Final review corrected the documented *mechanism* of that bug (it's a tailwind-merge conflict-detection gap, not a CSS-ordering issue as first assumed) — now recorded permanently as a code comment in `table.tsx` since this is the third slice in a row to hit the same class of "shadcn default silently survives override" bug (Slice 2: border color, Slice 3: `text-label`, Slice 4: padding).
+
+## Files added/changed (Kokonut work, all committed, nothing pushed)
+- `src/lib/utils.ts` — `cn()` patched to recognize the `text-label` token
+- `src/components/AppShell.tsx` — Sheet/DropdownMenu rebuild
+- `src/components/home/AnnouncementsPage.tsx`, `src/components/AccountSettings.tsx`, `src/components/ApplicationRegister.tsx` — migrated to shadcn primitives
+- `src/components/ui/{sheet,dropdown-menu,input,label,textarea,sonner,table}.tsx` — fetched via shadcn CLI (sonner hand-patched to drop `next-themes`, `table.tsx` carries a corrective comment on the padding trap)
+- `src/app/layout.tsx` — mounts `<Toaster />`
+- `globals.css`, `components.json` — Slice 0 token bridge and registry setup
 
 ## Decisions made
-- Fail closed: absence of the claim is treated identically to an explicit `false`. This was a hard requirement from the task, not a judgment call, but worth restating since it's the one place a "helpful" default (assume verified if the claim just isn't in the payload for some reason) would have quietly reopened the exact gap this task closes.
-- Rejection deletes the account rather than creating it with `client` role or leaving it in a pending state, matching the task's instruction to keep this simple: OAuth-based staff assignment either has proof, or it doesn't happen via OAuth at all.
-- Returned a fresh `NextResponse.redirect` rather than reusing the cookie-laden `response` on the rejection path, specifically so a session for an account being deleted in the same request can never reach the browser.
-- The check only ever runs on first-ever login (inside the existing `isNewAccount` gate) — consistent with the existing role-assignment design, and out of scope to change here.
+- Each slice gets its own plan written only when that slice starts, not all up front (roadmap decision, reaffirmed each slice).
+- Kokonut's own branded registry components are evaluated case by case and rejected when they're demo compositions rather than generic primitives — happened in Slice 1, may recur in later slices.
+- Recurring "shadcn base class silently survives `cn()` merge" bugs are now the reason for the standing rule: after any `npx shadcn add`, diff the fetched file against its override call sites before assuming an override works.
 
 ## Known issues / TODO
-- **Found, not part of this task, flagged separately**: the account used for live verification here (`jonas@arteagreenventures.com`) turned out to be a *second*, separate `auth.users` row for the same email as an earlier test login from initial Azure setup — same Microsoft `sub` both times, but the original row has no `agv_profiles` row at all (orphaned, likely left behind by one of the mid-debugging failures during initial Azure wiring). The newer row (used for this verification) is the one that's actually correct and working. Not cleaned up yet — asking before deleting a real auth account. See Blocked on.
-- **Honest coverage gap, not fixable without infrastructure this session doesn't have**: the rejection path (domain matches, `xms_edov` false/missing) is verified by direct code trace against the exact real data shape observed above, not against an actual live spoofed login. Constructing a genuine test would need a second Azure AD tenant configured to assign a user a `mail` attribute of `...@arteagreenventures.com` without owning that domain — which is the actual mechanism the real nOAuth vulnerability class exploits (a mismatch between a verified UPN/tenant domain and a freely-settable `mail` attribute), not something achievable by testing against AGV's own real, legitimately-owned tenant. This wasn't skipped — it isn't constructible in this environment. The logic itself (`=== true`, so any other value fails) is simple enough that this trace is a reasonable substitute for a live test.
-- **Pre-existing, unrelated to xms_edov**: no real end-to-end Microsoft OAuth login has ever been tested for the *client* path (a personal or non-AGV-organization Microsoft account) — every live OAuth test so far, across this whole project, has used the AGV staff account. The client path has only been verified by code trace. Not required for this task, but worth knowing before calling the client-OAuth story fully proven.
+- The pre-existing "July 31 Tier 1" batch is still uncommitted and untouched: `src/app/admin/access/page.tsx` (modified), plus new/untracked `src/app/api/admin/`, `src/components/admin/ActivityLog.tsx`, `src/components/admin/RoleAssignment.tsx`, `src/lib/supabase/auditLog.ts`, `src/lib/supabase/roles.ts`, `src/lib/supabase/loginActivity.ts`, `supabase/migrations/20260728120000_prevent_application_field_tamper.sql`. Confirmed non-overlapping with every Kokonut slice's files so far; will need its own decision on when to commit/review, separate from this phase.
+- Flagged for Slice 5: `AccessMatrix.tsx` is the only other raw `<table>` in the codebase; its `role="checkbox"` cells will trigger `TableCell`'s `[&:has([role=checkbox])]:pr-0` clause if migrated to the same `Table` primitive — a different hazard from the padding trap already solved, worth knowing going in.
+- The orphaned duplicate `auth.users` account (no `agv_profiles` row) flagged in an earlier phase is still unresolved.
+- Google OAuth remains separately pending, unaffected by this phase.
 
 ## Blocked on / needs a decision
-Whether to delete the orphaned duplicate `auth.users` row (no `agv_profiles` row, same email as the working account) found while verifying this — it looks clearly broken/dead, but it's a real account deletion on production data, so asking rather than doing it unilaterally.
+Nothing new. The orphaned-account question and the Tier 1 batch's commit/review timing are both still open, carried forward from before this phase.
 
 ## Next step
-User decides on the orphaned-account cleanup. Otherwise this task is complete — no further xms_edov work pending. Google OAuth (Batch C's other half) is still separately pending from before this task, unaffected by anything here.
+Slice 5 (Admin surfaces IA fix + reskin: Role assignment / Access matrix / Activity log) gets its own detailed plan when the user is ready to start it, followed by Slice 6 (`ApplicationDetail`, unified last per the roadmap's own decision) and Slice 7 to close out the roadmap.
