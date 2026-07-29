@@ -4,8 +4,8 @@
 @import "shadcn/tailwind.css";
 
 /* AGV has one fixed light identity (Phase 19), so there is no .dark block: `dark`
-   is repointed from the OS media query to a `.dark` class below, one that's never
-   applied anywhere, which is what keeps any dark:-prefixed utility a Kokonut
+   is repointed from the OS media query to a `.dark` class that is never applied
+   anywhere in this app, which is what keeps any dark:-prefixed utility a Kokonut
    component ships from firing off the user's OS color-scheme setting. */
 @custom-variant dark (&:is(.dark *));
 
@@ -193,6 +193,7 @@ body {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -217,11 +218,15 @@ body {
   --primary-foreground: var(--color-void);
   --secondary: var(--color-pine);
   --secondary-foreground: var(--color-bone);
-  --muted: var(--color-void);
+  /* muted/accent are mixes of AGV's own tokens, not new colors — mixing keeps
+     them visibly distinct from --background/--card so hover and highlight
+     states aren't no-ops, without introducing any hex outside the palette. */
+  --muted: color-mix(in oklab, var(--color-ash) 12%, var(--color-void));
   --muted-foreground: var(--color-ash);
-  --accent: var(--color-contour);
-  --accent-foreground: var(--color-void);
+  --accent: color-mix(in oklab, var(--color-signal) 12%, var(--color-void));
+  --accent-foreground: var(--color-bone);
   --destructive: var(--color-amber);
+  --destructive-foreground: var(--color-void);
   --border: var(--color-ash);
   --input: var(--color-ash);
   --ring: var(--color-signal);
