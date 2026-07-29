@@ -11,9 +11,12 @@
 //    from a now-removed auth-bypass tool, left unchanged deliberately).
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { isSeedAccount, showDevTools, useSession, type Account } from "@/lib/session";
 import { formatDate } from "@/lib/format";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function AccountSettings() {
   const account = useSession((s) => s.account);
@@ -58,12 +61,10 @@ function PasswordSection({ email }: { email: string }) {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setDone(false);
 
     if (next.length < 8) {
       setError("Choose a new password of at least 8 characters.");
@@ -103,7 +104,7 @@ function PasswordSection({ email }: { email: string }) {
         return;
       }
 
-      setDone(true);
+      toast.success("Password updated.");
       setCurrent("");
       setNext("");
       setConfirm("");
@@ -130,10 +131,7 @@ function PasswordSection({ email }: { email: string }) {
           value={current}
           onChange={setCurrent}
           autoComplete="current-password"
-          onEdit={() => {
-            setError(null);
-            setDone(false);
-          }}
+          onEdit={() => setError(null)}
         />
         <Field
           id="new-password"
@@ -142,10 +140,7 @@ function PasswordSection({ email }: { email: string }) {
           onChange={setNext}
           autoComplete="new-password"
           hint="At least 8 characters."
-          onEdit={() => {
-            setError(null);
-            setDone(false);
-          }}
+          onEdit={() => setError(null)}
         />
         <Field
           id="confirm-password"
@@ -153,10 +148,7 @@ function PasswordSection({ email }: { email: string }) {
           value={confirm}
           onChange={setConfirm}
           autoComplete="new-password"
-          onEdit={() => {
-            setError(null);
-            setDone(false);
-          }}
+          onEdit={() => setError(null)}
         />
 
         {error && (
@@ -164,12 +156,6 @@ function PasswordSection({ email }: { email: string }) {
             {error}
           </p>
         )}
-        {done && (
-          <p role="status" className="text-xs leading-relaxed text-contour">
-            Your password has been updated.
-          </p>
-        )}
-
         <button
           type="submit"
           disabled={busy}
@@ -500,13 +486,13 @@ function Field({
 }) {
   return (
     <div>
-      <label
+      <Label
         htmlFor={id}
         className="text-label font-semibold uppercase tracking-[0.14em] text-ash"
       >
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id={id}
         type="password"
         autoComplete={autoComplete}
@@ -515,7 +501,7 @@ function Field({
           onChange(e.target.value);
           onEdit?.();
         }}
-        className="mt-1.5 w-full rounded-md border border-ash/20 bg-void/70 px-3.5 py-2.5 font-mono text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal/70 focus:ring-1 focus:ring-signal/40"
+        className="mt-1.5 border-ash/20 bg-void/70 font-mono"
       />
       {hint && <p className="mt-1 text-label text-ash">{hint}</p>}
     </div>
