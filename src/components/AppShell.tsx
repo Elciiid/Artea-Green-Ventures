@@ -221,7 +221,11 @@ export default function AppShell({
                   <Link href="/account">Account settings</Link>
                 </DropdownMenuItem>
                 {showDevTools() && account.role === "admin" && (
-                  <DropdownMenuItem onSelect={resetDemo} className="text-ash focus:text-amber">
+                  <DropdownMenuItem
+                    onSelect={resetDemo}
+                    title="Undo every change and put the demo back to how it started"
+                    className="text-ash focus:text-amber"
+                  >
                     Reset demo data
                   </DropdownMenuItem>
                 )}
