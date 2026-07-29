@@ -338,8 +338,7 @@ function MfaSection({ account }: { account: Account }) {
       {excluded ? (
         <p className="mt-5 rounded-lg border border-ash/20 bg-void/40 px-4 py-3 text-sm text-ash">
           Two-step verification is turned off for the shared demo accounts on
-          purpose, so the developer account switcher keeps working. Sign in with
-          a real account to set it up.
+          purpose. Sign in with a real account to set it up.
         </p>
       ) : loading ? (
         <p role="status" className="mt-5 text-sm text-ash">
