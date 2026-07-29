@@ -84,7 +84,7 @@ export default function AnnouncementsPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Title"
-                  className="bg-void/40"
+                  className="bg-void/40 border-ash/20"
                 />
               </div>
               <div>
@@ -98,7 +98,7 @@ export default function AnnouncementsPage() {
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="What's happening?"
-                  className="bg-void/40"
+                  className="bg-void/40 border-ash/20 field-sizing-fixed"
                 />
               </div>
               <button
