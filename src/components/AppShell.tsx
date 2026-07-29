@@ -146,8 +146,21 @@ export default function AppShell({
   return (
     <div className="relative flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
-          <div className="flex items-center gap-3">
+        {/* A plain 3-child justify-between flex only looks centered when the
+            two flanking groups happen to be equal width — they aren't here
+            (logo+Menu button on the left vs. name badge+avatar on the right,
+            both variable width), so the center nav visibly drifted off true
+            center as viewport width or account-name length changed. A
+            [1fr_auto_1fr] grid centers the middle column independent of the
+            flanking content's width. Columns are assigned explicitly
+            (col-start-1/2/3) rather than left to auto-placement — below
+            `lg` the center nav is `display:none`, which removes it from grid
+            auto-placement entirely, so without an explicit column the right
+            block would slide into column 2 instead of staying in column 3.
+            Verified via computed grid-template-columns + child rects at
+            768/1024/1440px. */}
+        <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6">
+          <div className="col-start-1 flex items-center gap-3">
             <Link href={roleHome(account.role)} className="flex shrink-0 items-center">
               <Wordmark hideTagOnMobile />
             </Link>
@@ -191,7 +204,7 @@ export default function AppShell({
           </div>
 
           {/* center nav — plain text, dot-separated, desktop only */}
-          <nav aria-label="Primary" className="hidden items-center gap-3 lg:flex">
+          <nav aria-label="Primary" className="col-start-2 hidden items-center gap-3 lg:flex">
             {nav.map((item, i) => (
               <div key={item.href} className="flex items-center gap-3">
                 {i > 0 && <span className="text-ash/40">•</span>}
@@ -200,7 +213,7 @@ export default function AppShell({
             ))}
           </nav>
 
-          <div className="flex items-center gap-2.5">
+          <div className="col-start-3 flex items-center justify-end gap-2.5">
             <span className="hidden rounded-full bg-rail px-3.5 py-1.5 text-sm font-semibold text-rail-ink sm:inline-block">
               {account.name}
             </span>
