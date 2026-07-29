@@ -1,8 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* shadcn CLI runtime utilities (Radix data-state variants, shimmer/scroll-fade helpers) — opt-in only, no fixed colors of its own; any oklch() inside is a relative-color function against currentColor, not a new palette color. */
 @import "shadcn/tailwind.css";
-/* ---break---
- */
+
+/* AGV has one fixed light identity (Phase 19), so there is no .dark block: `dark`
+   is repointed from the OS media query to a `.dark` class below, one that's never
+   applied anywhere, which is what keeps any dark:-prefixed utility a Kokonut
+   component ships from firing off the user's OS color-scheme setting. */
 @custom-variant dark (&:is(.dark *));
 
 /* AGV Home design tokens (Phase 19 whole-app reskin) — warm green/cream
@@ -171,8 +175,7 @@ body {
     scroll-behavior: auto !important;
   }
 }
-/* ---break---
- */
+
 @theme inline {
   --font-heading: var(--font-display);
   --color-background: var(--background);
@@ -202,14 +205,7 @@ body {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* shadcn/Kokonut semantic tokens, bridged onto AGV's own palette — no new
-   colors. AGV has one fixed light identity (Phase 19), so there is no .dark
-   block: `dark` is repointed from the OS media query to a `.dark` class
-   below, one that's never applied anywhere, which is what keeps any
-   dark:-prefixed utility a Kokonut component ships from firing off the
-   user's OS color-scheme setting. */
-@custom-variant dark (&:is(.dark *));
-
+/* shadcn/Kokonut semantic tokens, bridged onto AGV's own palette — no new colors. */
 :root {
   --background: var(--color-void);
   --foreground: var(--color-bone);
