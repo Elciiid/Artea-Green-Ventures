@@ -15,10 +15,26 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { roleHome, showDevTools, useSession, type Role } from "@/lib/session";
 import { useApplications } from "@/lib/applications";
 import { Wordmark } from "@/components/Logo";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean };
 
@@ -78,7 +94,6 @@ export default function AppShell({
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
   const allowedRoles = expect === undefined ? null : Array.isArray(expect) ? expect : [expect];
 
   useEffect(() => {
@@ -95,31 +110,6 @@ export default function AppShell({
     setMobileNavOpen(false);
     setAccountMenuOpen(false);
   }, [pathname]);
-
-  // Escape closes whichever menu is open.
-  useEffect(() => {
-    if (!mobileNavOpen && !accountMenuOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setMobileNavOpen(false);
-        setAccountMenuOpen(false);
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [mobileNavOpen, accountMenuOpen]);
-
-  // Click outside the account dropdown closes it.
-  useEffect(() => {
-    if (!accountMenuOpen) return;
-    function onClick(e: MouseEvent) {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
-        setAccountMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [accountMenuOpen]);
 
   // Shown while the persisted session restores or a redirect is pending.
   if (!hydrated || !account || (allowedRoles && !allowedRoles.includes(account.role))) {
@@ -165,42 +155,33 @@ export default function AppShell({
               <Wordmark hideTagOnMobile />
             </Link>
 
-            <div className="relative ml-1">
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen((v) => !v)}
-                aria-label="Toggle navigation menu"
-                aria-expanded={mobileNavOpen}
-                aria-haspopup="menu"
-                aria-controls="mobile-nav-panel"
-                className="inline-flex items-center gap-2 rounded-full border border-ash/25 px-3.5 py-1.5 text-sm text-ash transition hover:border-signal/50 hover:text-bone"
-              >
-                <svg aria-hidden width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-                  <path d="M2 4.5h14M2 9h14M2 13.5h14" />
-                </svg>
-                Menu
-              </button>
-
-              {/* Anchored to the button itself (same pattern as the account
-                  dropdown below) rather than to the header — anchoring to
-                  the header positioned it at the viewport's left edge on
-                  wide screens instead of near the button. Also the only way
-                  to reach Staff directory on desktop, where the pill nav
-                  doesn't list it. */}
-              {mobileNavOpen && (
-                <nav
-                  id="mobile-nav-panel"
-                  aria-label="Primary"
-                  className="glass absolute left-0 top-[calc(100%+0.5rem)] w-56 rounded-2xl p-2 backdrop-blur-xl"
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Toggle navigation menu"
+                  className="ml-1 inline-flex items-center gap-2 rounded-full border border-ash/25 px-3.5 py-1.5 text-sm text-ash transition hover:border-signal/50 hover:text-bone lg:hidden"
                 >
-                  <div className="flex flex-col gap-1">
-                    {menuNav.map((item) => (
-                      <MenuNavLink key={item.href} item={item} active={item.match(pathname)} />
-                    ))}
-                  </div>
+                  <svg aria-hidden width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                    <path d="M2 4.5h14M2 9h14M2 13.5h14" />
+                  </svg>
+                  Menu
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="glass w-72 border-ash/20 backdrop-blur-xl">
+                <SheetHeader>
+                  <SheetTitle className="font-display text-bone">Navigation</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Jump to any section of AGV Home.
+                  </SheetDescription>
+                </SheetHeader>
+                <nav aria-label="Primary" className="flex flex-col gap-1 px-4 pb-4">
+                  {menuNav.map((item) => (
+                    <MenuNavLink key={item.href} item={item} active={item.match(pathname)} />
+                  ))}
                 </nav>
-              )}
-            </div>
+              </SheetContent>
+            </Sheet>
           </div>
 
           {/* center nav — plain text, dot-separated, desktop only */}
@@ -218,53 +199,42 @@ export default function AppShell({
               {account.name}
             </span>
 
-            <div ref={accountMenuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setAccountMenuOpen((v) => !v)}
-                aria-expanded={accountMenuOpen}
-                aria-haspopup="menu"
-                aria-label={`Account menu for ${account.name}`}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-ash/25 text-sm font-bold text-bone transition hover:border-signal/50"
-              >
-                {account.name.charAt(0)}
-              </button>
-
-              {accountMenuOpen && (
-                <div
-                  role="menu"
-                  className="glass absolute right-0 top-[calc(100%+0.5rem)] w-60 rounded-2xl p-2 backdrop-blur-xl"
+            <DropdownMenu open={accountMenuOpen} onOpenChange={setAccountMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Account menu for ${account.name}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-ash/25 text-sm font-bold text-bone transition hover:border-signal/50"
                 >
-                  <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-bone">{account.name}</p>
-                    <p className="mt-1 inline-block rounded-full border border-ash/30 px-2 py-0.5 text-label uppercase tracking-[0.12em] text-ash">
-                      {account.role}
-                    </p>
-                  </div>
-                  <MenuLink href="/account">Account settings</MenuLink>
-                  {showDevTools() && account.role === "admin" && (
-                    <button
-                      type="button"
-                      onClick={resetDemo}
-                      title="Undo every change and put the demo back to how it started"
-                      className="block w-full rounded-lg px-3 py-1.5 text-left text-sm text-ash transition hover:bg-void/40 hover:text-amber"
-                    >
-                      Reset demo data
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await signOut();
-                      router.push("/");
-                    }}
-                    className="block w-full rounded-lg px-3 py-1.5 text-left text-sm text-ash transition hover:bg-void/40 hover:text-bone"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
+                  {account.name.charAt(0)}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="glass w-60 border-ash/20 backdrop-blur-xl">
+                <DropdownMenuLabel className="px-3 py-2 font-normal">
+                  <p className="text-sm font-medium text-bone">{account.name}</p>
+                  <p className="mt-1 inline-block rounded-full border border-ash/30 px-2 py-0.5 text-label uppercase tracking-[0.12em] text-ash">
+                    {account.role}
+                  </p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/account">Account settings</Link>
+                </DropdownMenuItem>
+                {showDevTools() && account.role === "admin" && (
+                  <DropdownMenuItem onSelect={resetDemo} className="text-ash focus:text-amber">
+                    Reset demo data
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    await signOut();
+                    router.push("/");
+                  }}
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -303,23 +273,10 @@ export default function AppShell({
   );
 }
 
-function MenuLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      role="menuitem"
-      className="block rounded-lg px-3 py-1.5 text-sm text-ash transition hover:bg-void/40 hover:text-bone"
-    >
-      {children}
-    </Link>
-  );
-}
-
 function MenuNavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
-      role="menuitem"
       aria-current={active ? "page" : undefined}
       className={`block rounded-lg px-3 py-1.5 text-sm transition ${
         active ? "bg-void/60 font-semibold text-signal" : "text-ash hover:bg-void/40 hover:text-bone"
