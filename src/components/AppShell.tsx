@@ -247,7 +247,7 @@ export default function AppShell({
 
       <main
         id="main-content"
-        className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-5 py-12 sm:px-8"
+        className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8"
       >
         {children}
       </main>
