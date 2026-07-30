@@ -14,9 +14,6 @@ export default function PeopleLayout({ children }: { children: React.ReactNode }
         <h1 className="mt-3 font-display text-4xl font-bold text-bone sm:text-5xl">
           People
         </h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-ash">
-          Who someone is, what they can see, and what happened — in one place, each with its own page.
-        </p>
       </div>
 
       <PeopleTabNav />

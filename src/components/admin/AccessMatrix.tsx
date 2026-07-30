@@ -23,6 +23,7 @@ import {
   type LiveGrant,
 } from "@/lib/supabase/access";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -108,14 +109,10 @@ export default function AccessMatrix() {
 
   return (
     <>
-      <div>
-        <h2 className="font-display text-lg font-bold text-bone">Access matrix</h2>
-        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ash">
-          Choose which applications each person can see. Check a box to grant
-          access, uncheck it to revoke it. Changes save on their own and take
-          effect right away.
-        </p>
-      </div>
+      <PeopleSectionHeading
+        label="Access matrix"
+        description="Choose which applications each person can see. Check a box to grant access, uncheck it to revoke it. Changes save on their own and take effect right away."
+      />
 
       {state.status === "loading" ? (
         <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">

@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 
 const ROLE_OPTIONS: Role[] = ["client", "staff", "admin"];
 
@@ -95,11 +96,10 @@ export default function RoleAssignment() {
       aria-label="Role assignment"
       className="glass mt-9 rounded-2xl p-6 backdrop-blur-xl sm:p-7"
     >
-      <h2 className="font-display text-lg font-bold text-bone">Role assignment</h2>
-      <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ash">
-        Change what a person can access. Admin sees and manages everything;
-        staff can edit applications they&apos;re granted; client is read-only.
-      </p>
+      <PeopleSectionHeading
+        label="Role assignment"
+        description="Change what a person can access. Admin sees and manages everything; staff can edit applications they're granted; client is read-only."
+      />
 
       {state.status === "loading" ? (
         <p role="status" className="mt-5 text-sm text-ash">

@@ -13,6 +13,7 @@ import { fetchAllProfiles, type ProfileForRoleAssignment } from "@/lib/supabase/
 import { fetchAuditLog, type AuditLogEntry } from "@/lib/supabase/auditLog";
 import { fetchLoginActivity, type LoginActivityEntry } from "@/lib/supabase/loginActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 
 type Tab = "logins" | "activity";
 
@@ -55,10 +56,10 @@ export default function ActivityLog() {
 
   return (
     <section aria-label="Activity log" className="glass mt-9 rounded-2xl p-6 backdrop-blur-xl sm:p-7">
-      <h2 className="font-display text-lg font-bold text-bone">Activity log</h2>
-      <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ash">
-        Recent sign-in/sign-up activity and in-app changes. Read-only, most recent first.
-      </p>
+      <PeopleSectionHeading
+        label="Activity log"
+        description="Recent sign-in/sign-up activity and in-app changes. Read-only, most recent first."
+      />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-5">
         <TabsList variant="line" className="w-full justify-start border-b border-ash/20 bg-transparent p-0">

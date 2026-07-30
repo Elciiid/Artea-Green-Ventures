@@ -5,6 +5,7 @@ import SupabaseAuthListener from "@/components/SupabaseAuthListener";
 import DemoBanner from "@/components/DemoBanner";
 import AxeReporter from "@/components/dev/AxeReporter";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -56,7 +57,7 @@ export default function RootLayout({
         <SupabaseAuthListener />
         {process.env.NODE_ENV === "development" && <AxeReporter />}
         <DemoBanner />
-        {children}
+        <TooltipProvider>{children}</TooltipProvider>
         <Toaster position="bottom-center" />
       </body>
     </html>
