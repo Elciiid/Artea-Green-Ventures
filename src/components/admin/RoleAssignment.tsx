@@ -175,8 +175,8 @@ export default function RoleAssignment() {
         </div>
       )}
 
-      <AlertDialog open={confirming} onOpenChange={setConfirming}>
-        <AlertDialogContent className="glass border-ash/20 bg-pine backdrop-blur-xl">
+      <AlertDialog open={confirming} onOpenChange={(open) => { if (!busy) setConfirming(open); }}>
+        <AlertDialogContent className="glass backdrop-blur-xl">
           {selected && (
             <>
               <AlertDialogHeader>

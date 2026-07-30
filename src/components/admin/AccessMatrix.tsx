@@ -143,7 +143,7 @@ export default function AccessMatrix() {
           <motion.section
             {...enter}
             aria-label="Application access by person"
-            className="glass mt-9 overflow-x-auto rounded-2xl p-2 backdrop-blur-xl"
+            className="glass mt-9 rounded-2xl p-2 backdrop-blur-xl"
           >
             <Table className="min-w-[720px]">
               <TableHeader>
@@ -155,7 +155,7 @@ export default function AccessMatrix() {
                     Person
                   </TableHead>
                   {state.applications.map((app) => (
-                    <TableHead key={app.id} scope="col" className="h-auto whitespace-normal px-4 py-4 text-left align-bottom">
+                    <TableHead key={app.id} scope="col" className="h-auto whitespace-normal px-4 py-4 text-left align-bottom font-normal">
                       <span className="block font-mono text-label tracking-[0.1em] text-ash">
                         {app.reference}
                       </span>

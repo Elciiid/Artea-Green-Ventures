@@ -62,10 +62,10 @@ export default function ActivityLog() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-5">
         <TabsList variant="line" className="w-full justify-start border-b border-ash/20 bg-transparent p-0">
-          <TabsTrigger value="logins" className="data-active:text-signal after:bg-signal">
+          <TabsTrigger value="logins" className="flex-none data-active:text-signal after:bg-signal">
             Sign-in / sign-up
           </TabsTrigger>
-          <TabsTrigger value="activity" className="data-active:text-signal after:bg-signal">
+          <TabsTrigger value="activity" className="flex-none data-active:text-signal after:bg-signal">
             In-app activity
           </TabsTrigger>
         </TabsList>
