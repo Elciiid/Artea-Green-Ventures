@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { fetchAllProfiles, type ProfileForRoleAssignment } from "@/lib/supabase/roles";
 import { fetchAuditLog, type AuditLogEntry } from "@/lib/supabase/auditLog";
 import { fetchLoginActivity, type LoginActivityEntry } from "@/lib/supabase/loginActivity";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Tab = "logins" | "activity";
 
@@ -59,71 +60,65 @@ export default function ActivityLog() {
         Recent sign-in/sign-up activity and in-app changes. Read-only, most recent first.
       </p>
 
-      <div className="mt-5 flex gap-2 border-b border-ash/20">
-        <button
-          type="button"
-          onClick={() => setTab("logins")}
-          className={`px-3 py-2 text-sm font-medium transition ${
-            tab === "logins" ? "border-b-2 border-signal text-signal" : "text-ash hover:text-bone"
-          }`}
-        >
-          Sign-in / sign-up
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("activity")}
-          className={`px-3 py-2 text-sm font-medium transition ${
-            tab === "activity" ? "border-b-2 border-signal text-signal" : "text-ash hover:text-bone"
-          }`}
-        >
-          In-app activity
-        </button>
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-5">
+        <TabsList variant="line" className="w-full justify-start border-b border-ash/20 bg-transparent p-0">
+          <TabsTrigger value="logins" className="data-active:text-signal after:bg-signal">
+            Sign-in / sign-up
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="data-active:text-signal after:bg-signal">
+            In-app activity
+          </TabsTrigger>
+        </TabsList>
 
-      {tab === "logins" ? (
-        logins.status === "loading" ? (
-          <p role="status" className="mt-5 text-sm text-ash">Loading…</p>
-        ) : logins.status === "error" ? (
-          <p className="mt-5 text-sm text-amber">{logins.message}</p>
-        ) : (
-          <ul className="mt-5 divide-y divide-ash/15">
-            {logins.data.map((entry) => (
-              <li key={entry.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
-                <span className="font-medium text-bone">{entry.email}</span>
-                <span className="text-xs text-ash">
-                  {entry.provider} · joined {formatTimestamp(entry.created_at)}
-                  {entry.last_sign_in_at && <> · last signed in {formatTimestamp(entry.last_sign_in_at)}</>}
-                </span>
-              </li>
-            ))}
-            {logins.data.length === 0 && <li className="py-2.5 text-sm text-ash">No accounts yet.</li>}
-          </ul>
-        )
-      ) : activity.status === "loading" ? (
-        <p role="status" className="mt-5 text-sm text-ash">Loading…</p>
-      ) : activity.status === "error" ? (
-        <p className="mt-5 text-sm text-amber">{activity.message}</p>
-      ) : (
-        <ul className="mt-5 divide-y divide-ash/15">
-          {activity.data.map((entry) => (
-            <li key={entry.id} className="py-2.5 text-sm">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <span className="font-medium text-bone">
-                  {actorName(entry.actor)} · {entry.action.toLowerCase()} on {entry.table_name}
-                </span>
-                <span className="text-xs text-ash">{formatTimestamp(entry.at)}</span>
-              </div>
-              <details className="mt-1">
-                <summary className="cursor-pointer text-xs text-ash hover:text-bone">Details</summary>
-                <pre className="mt-1.5 overflow-x-auto rounded-lg bg-void/40 p-3 text-xs text-ash">
-                  {JSON.stringify(entry.changes, null, 2)}
-                </pre>
-              </details>
-            </li>
-          ))}
-          {activity.data.length === 0 && <li className="py-2.5 text-sm text-ash">No activity yet.</li>}
-        </ul>
-      )}
+        <TabsContent value="logins">
+          {logins.status === "loading" ? (
+            <p role="status" className="mt-5 text-sm text-ash">Loading…</p>
+          ) : logins.status === "error" ? (
+            <p className="mt-5 text-sm text-amber">{logins.message}</p>
+          ) : (
+            <ul className="mt-5 divide-y divide-ash/15">
+              {logins.data.map((entry) => (
+                <li key={entry.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
+                  <span className="font-medium text-bone">{entry.email}</span>
+                  <span className="text-xs text-ash">
+                    {entry.provider} · joined {formatTimestamp(entry.created_at)}
+                    {entry.last_sign_in_at && <> · last signed in {formatTimestamp(entry.last_sign_in_at)}</>}
+                  </span>
+                </li>
+              ))}
+              {logins.data.length === 0 && <li className="py-2.5 text-sm text-ash">No accounts yet.</li>}
+            </ul>
+          )}
+        </TabsContent>
+
+        <TabsContent value="activity">
+          {activity.status === "loading" ? (
+            <p role="status" className="mt-5 text-sm text-ash">Loading…</p>
+          ) : activity.status === "error" ? (
+            <p className="mt-5 text-sm text-amber">{activity.message}</p>
+          ) : (
+            <ul className="mt-5 divide-y divide-ash/15">
+              {activity.data.map((entry) => (
+                <li key={entry.id} className="py-2.5 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <span className="font-medium text-bone">
+                      {actorName(entry.actor)} · {entry.action.toLowerCase()} on {entry.table_name}
+                    </span>
+                    <span className="text-xs text-ash">{formatTimestamp(entry.at)}</span>
+                  </div>
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-ash hover:text-bone">Details</summary>
+                    <pre className="mt-1.5 overflow-x-auto rounded-lg bg-void/40 p-3 text-xs text-ash">
+                      {JSON.stringify(entry.changes, null, 2)}
+                    </pre>
+                  </details>
+                </li>
+              ))}
+              {activity.data.length === 0 && <li className="py-2.5 text-sm text-ash">No activity yet.</li>}
+            </ul>
+          )}
+        </TabsContent>
+      </Tabs>
     </section>
   );
 }
