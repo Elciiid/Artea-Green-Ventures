@@ -8,12 +8,31 @@
 // see src/lib/supabase/roles.ts and that route's file header for why.
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { Role } from "@/lib/session";
 import {
   fetchAllProfiles,
   setProfileRole,
   type ProfileForRoleAssignment,
 } from "@/lib/supabase/roles";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ROLE_OPTIONS: Role[] = ["client", "staff", "admin"];
 
@@ -28,7 +47,6 @@ export default function RoleAssignment() {
   const [pendingRole, setPendingRole] = useState<Role | "">("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   async function load() {
     setState({ status: "loading" });
@@ -62,11 +80,11 @@ export default function RoleAssignment() {
     setBusy(true);
     try {
       await setProfileRole(selected.id, pendingRole);
-      setToast(`${selected.name} is now ${pendingRole}.`);
+      toast.success(`${selected.name} is now ${pendingRole}.`);
       setConfirming(false);
       await load();
     } catch (e) {
-      setToast(e instanceof Error ? e.message : "Couldn't change role.");
+      toast.error(e instanceof Error ? e.message : "Couldn't change role.");
     } finally {
       setBusy(false);
     }
@@ -91,92 +109,88 @@ export default function RoleAssignment() {
         <p className="mt-5 text-sm text-amber">{state.message}</p>
       ) : (
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
-          <label className="flex-1 text-sm">
+          <div className="flex-1 text-sm">
             <span className="block text-label font-semibold uppercase tracking-[0.12em] text-ash">
               Person
             </span>
-            <select
-              value={selectedId}
-              onChange={(e) => onSelectProfile(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-ash/25 bg-void/40 px-3 py-2 text-sm text-bone"
-            >
-              <option value="">Choose a person…</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.role}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Select value={selectedId} onValueChange={onSelectProfile}>
+              <SelectTrigger className="mt-1.5 w-full border-ash/25 bg-void/40 text-bone">
+                <SelectValue placeholder="Choose a person…" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} — {p.role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="flex-1 text-sm">
+          <div className="flex-1 text-sm">
             <span className="block text-label font-semibold uppercase tracking-[0.12em] text-ash">
               New role
             </span>
-            <select
+            <Select
               value={pendingRole}
               disabled={!selected}
-              onChange={(e) => {
-                setPendingRole(e.target.value as Role);
+              onValueChange={(value) => {
+                setPendingRole(value as Role);
                 setConfirming(false);
               }}
-              className="mt-1.5 w-full rounded-lg border border-ash/25 bg-void/40 px-3 py-2 text-sm text-bone disabled:opacity-50"
             >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="mt-1.5 w-full border-ash/25 bg-void/40 text-bone">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <button
+          <Button
             type="button"
             disabled={!selected || !pendingRole || pendingRole === selected.role || busy}
             onClick={() => setConfirming(true)}
-            className="rounded-full bg-signal px-5 py-2.5 text-sm font-semibold text-void transition hover:brightness-110 disabled:opacity-50"
+            className="rounded-full"
           >
             Change role
-          </button>
+          </Button>
         </div>
       )}
 
-      {confirming && selected && (
-        <div
-          role="alertdialog"
-          aria-label="Confirm role change"
-          className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3"
-        >
-          <p className="text-sm text-bone">
-            Change <strong>{selected.name}</strong> from{" "}
-            <strong>{selected.role}</strong> to <strong>{pendingRole}</strong>?
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onConfirm}
-              className="rounded-full bg-signal px-4 py-1.5 text-xs font-semibold text-void disabled:opacity-50"
-            >
-              {busy ? "Saving…" : "Confirm"}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setConfirming(false)}
-              className="rounded-full border border-ash/30 px-4 py-1.5 text-xs text-ash"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {toast && (
-        <p role="status" aria-live="polite" className="mt-4 text-xs text-ash">
-          {toast}
-        </p>
-      )}
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent className="glass border-ash/20 bg-pine backdrop-blur-xl">
+          {selected && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-bone">Confirm role change</AlertDialogTitle>
+                <AlertDialogDescription className="text-ash">
+                  Change <strong className="text-bone">{selected.name}</strong> from{" "}
+                  <strong className="text-bone">{selected.role}</strong> to{" "}
+                  <strong className="text-bone">{pendingRole}</strong>?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={busy}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onConfirm();
+                  }}
+                >
+                  {busy ? "Saving…" : "Confirm"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
