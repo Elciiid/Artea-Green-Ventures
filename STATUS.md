@@ -58,4 +58,4 @@ The final whole-branch review caught one bug the controller's own live verificat
 Nothing new. The orphaned-account question is still open, carried forward from before this phase.
 
 ## Next step
-Slice 6 (`ApplicationDetail`, unified last per the roadmap's own decision) gets its own detailed plan when the user is ready to start it, followed by Slice 7 to close out the roadmap.
+Slice 6 (`ApplicationDetail`, unified last per the roadmap's own decision) is the final slice on the roadmap — the roadmap only defines Slices 0 through 6 (seven slices total, not eight), so completing Slice 6 closes out the whole Kokonut UI Adoption program. A Slice 6 attempt was started and then fully reverted this session (plan written, Task 1 committed and Task 2 partway through, then the user asked to revert everything — repo is back at this commit, nothing from that attempt remains). Slice 6 gets a fresh plan whenever the user is ready to try again.
