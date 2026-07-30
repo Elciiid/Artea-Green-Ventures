@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "AGV Home" };
 // the same mechanism every other role-gated page in this app uses.
 export default function HomePage() {
   return (
-    <AppShell expect={["admin", "staff"]}>
+    <AppShell expect={["admin", "staff"]} centerContent>
       <HomeLanding />
     </AppShell>
   );

@@ -83,9 +83,14 @@ const DIRECTORY_ITEM: NavItem = {
 
 export default function AppShell({
   expect,
+  centerContent = false,
   children,
 }: {
   expect?: Role | Role[];
+  /** Vertically centers the page's content within the shell instead of
+   * top-aligning it — appropriate for a landing/orientation surface (Home),
+   * not for task pages where it pushes short content below the fold. */
+  centerContent?: boolean;
   children: React.ReactNode;
 }) {
   const account = useSession((s) => s.account);
@@ -247,7 +252,9 @@ export default function AppShell({
 
       <main
         id="main-content"
-        className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8"
+        className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8 ${
+          centerContent ? "justify-center" : ""
+        }`}
       >
         {children}
       </main>
