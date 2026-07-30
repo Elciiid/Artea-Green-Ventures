@@ -155,7 +155,7 @@ export default function AccessMatrix() {
                     Person
                   </TableHead>
                   {state.applications.map((app) => (
-                    <TableHead key={app.id} scope="col" className="h-auto px-4 py-4 text-left align-bottom">
+                    <TableHead key={app.id} scope="col" className="h-auto whitespace-normal px-4 py-4 text-left align-bottom">
                       <span className="block font-mono text-label tracking-[0.1em] text-ash">
                         {app.reference}
                       </span>
@@ -170,7 +170,7 @@ export default function AccessMatrix() {
                 {state.profiles.map((profile) => {
                   const count = state.grants.filter((g) => g.profile_id === profile.id).length;
                   return (
-                    <TableRow key={profile.id} className="border-ash/15 last:border-b-0">
+                    <TableRow key={profile.id} className="border-ash/15 last:border-b-0 hover:bg-transparent">
                       <TableHead scope="row" className="h-auto whitespace-normal py-5 pl-1 pr-4 text-left align-top font-normal">
                         <span className="block font-display text-sm font-bold text-bone">
                           {profile.name}
