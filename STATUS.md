@@ -3,6 +3,21 @@ Updated: 2026-07-30
 Phase: Kokonut UI Adoption — Slices 0–5 complete (of 7 planned); live at a custom domain
 State: On track. Visual foundation (Slice 0) plus five feature-surface migrations (Slices 1–5) landed, each with its own plan, subagent-driven execution, live browser verification, and a final whole-branch review. Nothing pushed. The app is now also live at `https://portal.arteagreenventures.com` (custom subdomain on Vercel, verified working). The previously-pending "July 31 Tier 1" batch has been committed and is no longer outstanding — see below.
 
+## Addendum: excessive vertical spacing fix (2026-07-30)
+**Reported bug:** a large empty gap between the top nav and actual page content on `/admin/people/roles`, forcing scrolling to reach the Role assignment form.
+
+**Actual source:** not the People layout itself — one level up, in `AppShell.tsx`'s shared `<main>` element, which has had `justify-content: center` since the very first scaffold commit. This vertically centers every page's content within the full flex space between header and footer; on short-content pages at tall viewports, that pushes content down by whatever space is "left over." Confirmed via live `getBoundingClientRect()`/computed-style checks (Browser pane screenshots weren't exercised this pass, so the DOM-measurement route was used throughout): toggling `justify-content` to `flex-start` live in the browser collapsed the gap from 207px to exactly the intended `py-12` padding (48px).
+
+**What changed:** removed `justify-center` from `AppShell.tsx`'s `<main>` className (one class, no new spacing values introduced — same `py-12` padding as before, just no longer fighting a centering rule on top of it).
+
+**Where else it showed up:** the same root cause affects every page through the shared shell, not just People — measured at 1920×1080 before the fix:
+- `/admin/people/roles` — 207px gap (bug)
+- `/admin` (Applications Register) — 217px gap (bug, only 3 seed rows)
+- `/home` — 198px gap (bug)
+- `/admin/people/access`, `/admin/people/activity`, `/account` — no visible bug; each page's own content already fills or exceeds the available space, leaving nothing for centering to redistribute
+
+Fixing `/home` too was a real fork (Home's centered feel was arguably intentional for a landing page), raised with the user explicitly — chosen to fix everywhere for consistency rather than special-case Home. All three People tabs and `/admin`/`/home` re-verified clean (48px gap, primary content visible without scrolling) at both 1920×1080 and 1440×768; `/account` unchanged (was already fine). Commit: 6263e77.
+
 ## Done this session (and the sessions before it)
 
 ### Slice 0 — Foundation (7 commits: 3319ac3, 8b595c5, 60dbdc5, eb054d3, d8ea857, 430f0f7, 6165694)
