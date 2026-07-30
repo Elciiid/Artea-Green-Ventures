@@ -110,11 +110,17 @@ export default function RoleAssignment() {
       ) : (
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 text-sm">
-            <span className="block text-label font-semibold uppercase tracking-[0.12em] text-ash">
+            <span
+              id="role-assignment-person-label"
+              className="block text-label font-semibold uppercase tracking-[0.12em] text-ash"
+            >
               Person
             </span>
             <Select value={selectedId} onValueChange={onSelectProfile}>
-              <SelectTrigger className="mt-1.5 w-full border-ash/25 bg-void/40 text-bone">
+              <SelectTrigger
+                aria-labelledby="role-assignment-person-label"
+                className="mt-1.5 w-full border-ash/25 bg-void/40 text-bone"
+              >
                 <SelectValue placeholder="Choose a person…" />
               </SelectTrigger>
               <SelectContent>
@@ -128,7 +134,10 @@ export default function RoleAssignment() {
           </div>
 
           <div className="flex-1 text-sm">
-            <span className="block text-label font-semibold uppercase tracking-[0.12em] text-ash">
+            <span
+              id="role-assignment-newrole-label"
+              className="block text-label font-semibold uppercase tracking-[0.12em] text-ash"
+            >
               New role
             </span>
             <Select
@@ -139,8 +148,11 @@ export default function RoleAssignment() {
                 setConfirming(false);
               }}
             >
-              <SelectTrigger className="mt-1.5 w-full border-ash/25 bg-void/40 text-bone">
-                <SelectValue />
+              <SelectTrigger
+                aria-labelledby="role-assignment-newrole-label"
+                className="mt-1.5 w-full border-ash/25 bg-void/40 text-bone"
+              >
+                <SelectValue placeholder="Choose a role…" />
               </SelectTrigger>
               <SelectContent>
                 {ROLE_OPTIONS.map((r) => (
