@@ -6,7 +6,7 @@
 // its usual verification email); any other email becomes a client, created
 // already-verified via the Admin API with no email sent at all — clients
 // start with zero application access regardless (an admin still has to
-// grant it via /admin/access), so there's no invite/verification round-trip
+// grant it via /admin/people/access), so there's no invite/verification round-trip
 // to wait on. This page never calls supabase.auth.signUp() directly — it
 // POSTs to the route, so the domain branch can't be skipped from devtools.
 // On success it hydrates its own browser session from the tokens the route

@@ -47,9 +47,9 @@ function recordsNav(role: Role): NavItem[] {
           match: (p) => p === "/admin" || p.startsWith("/admin/applications"),
         },
         {
-          href: "/admin/access",
-          label: "User access",
-          match: (p) => p.startsWith("/admin/access"),
+          href: "/admin/people",
+          label: "People",
+          match: (p) => p.startsWith("/admin/people"),
         },
       ]
     : [

@@ -7,7 +7,7 @@
 //     ownership matters here.
 //   - Any other email becomes a client, with NO email sent at all. Clients
 //     start with zero application access regardless (an admin still has to
-//     grant it via /admin/access), so the checkpoint that matters for them
+//     grant it via /admin/people/access), so the checkpoint that matters for them
 //     is that manual grant, not an email round-trip. Using
 //     auth.admin.createUser({ email_confirm: true }) creates the account
 //     already-verified — Supabase never attempts a delivery, so this path

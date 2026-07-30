@@ -1,5 +1,5 @@
 // Phase 10b-2 — real Supabase reads for applications, replacing the Zustand
-// mock store for every view except /admin/access (still 10b-3; it keeps
+// mock store for every view except /admin/people/access (still 10b-3; it keeps
 // reading src/lib/applications.ts until the grant/revoke UI goes real too).
 //
 // No client-side visibility filtering happens here: RLS (Phase 10b-1)
