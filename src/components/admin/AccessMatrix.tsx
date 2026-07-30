@@ -8,8 +8,9 @@
 // error toast if it fails, reverting to whatever the database actually
 // holds rather than assuming the click succeeded.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import { useReducedMotionPref } from "@/lib/preferences";
 import {
   fetchApplicationsForAccess,
@@ -21,6 +22,7 @@ import {
   type GrantableProfile,
   type LiveGrant,
 } from "@/lib/supabase/access";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -42,16 +44,6 @@ export default function AccessMatrix() {
   const reduced = useReducedMotionPref();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [pending, setPending] = useState<Set<string>>(new Set());
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<number | undefined>(undefined);
-
-  function showToast(msg: string) {
-    setToast(msg);
-    window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
-  }
-
-  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +84,7 @@ export default function AccessMatrix() {
       const grants = await fetchLiveGrants();
       setState((s) => (s.status === "ready" ? { ...s, grants } : s));
     } catch (e) {
-      showToast(
+      toast.error(
         e instanceof Error
           ? `Couldn't update access: ${e.message}`
           : "Couldn't update access."
@@ -117,13 +109,8 @@ export default function AccessMatrix() {
   return (
     <>
       <div>
-        <p className="text-label font-semibold uppercase tracking-[0.18em] text-signal">
-          Admin console
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-bold text-bone sm:text-5xl">
-          User access
-        </h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-ash">
+        <h2 className="font-display text-lg font-bold text-bone">Access matrix</h2>
+        <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ash">
           Choose which applications each person can see. Check a box to grant
           access, uncheck it to revoke it. Changes save on their own and take
           effect right away.
@@ -158,33 +145,33 @@ export default function AccessMatrix() {
             aria-label="Application access by person"
             className="glass mt-9 overflow-x-auto rounded-2xl p-2 backdrop-blur-xl"
           >
-            <table className="w-full min-w-[720px] border-collapse">
-              <thead>
-                <tr className="border-b border-ash/30">
-                  <th
+            <Table className="min-w-[720px]">
+              <TableHeader>
+                <TableRow className="border-ash/30 hover:bg-transparent">
+                  <TableHead
                     scope="col"
-                    className="w-64 px-4 py-3 pl-1 text-left text-label font-semibold uppercase tracking-[0.12em] text-ash"
+                    className="h-auto w-64 px-4 py-3 pl-1 text-left text-label font-semibold uppercase tracking-[0.12em] text-ash"
                   >
                     Person
-                  </th>
+                  </TableHead>
                   {state.applications.map((app) => (
-                    <th key={app.id} scope="col" className="px-4 py-4 text-left align-bottom">
+                    <TableHead key={app.id} scope="col" className="h-auto px-4 py-4 text-left align-bottom">
                       <span className="block font-mono text-label tracking-[0.1em] text-ash">
                         {app.reference}
                       </span>
                       <span className="mt-1 block max-w-[160px] text-[13px] font-medium leading-snug text-bone">
                         {app.title}
                       </span>
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {state.profiles.map((profile) => {
                   const count = state.grants.filter((g) => g.profile_id === profile.id).length;
                   return (
-                    <tr key={profile.id} className="border-b border-ash/15 last:border-b-0">
-                      <th scope="row" className="py-5 pl-1 pr-4 text-left align-top">
+                    <TableRow key={profile.id} className="border-ash/15 last:border-b-0">
+                      <TableHead scope="row" className="h-auto whitespace-normal py-5 pl-1 pr-4 text-left align-top font-normal">
                         <span className="block font-display text-sm font-bold text-bone">
                           {profile.name}
                         </span>
@@ -197,7 +184,7 @@ export default function AccessMatrix() {
                         >
                           Can see {count} of {state.applications.length}
                         </span>
-                      </th>
+                      </TableHead>
                       {state.applications.map((app) => {
                         const key = grantKey(app.id, profile.id);
                         const checked = state.grants.some(
@@ -205,7 +192,10 @@ export default function AccessMatrix() {
                         );
                         const busy = pending.has(key);
                         return (
-                          <td key={app.id} className="px-4 py-5 align-top">
+                          <TableCell
+                            key={app.id}
+                            className="px-4 py-5 align-top [&:has([role=checkbox])]:pr-4"
+                          >
                             <button
                               type="button"
                               role="checkbox"
@@ -230,14 +220,14 @@ export default function AccessMatrix() {
                                 />
                               </svg>
                             </button>
-                          </td>
+                          </TableCell>
                         );
                       })}
-                    </tr>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </motion.section>
 
           <p className="mt-3 text-xs text-ash">
@@ -245,18 +235,6 @@ export default function AccessMatrix() {
           </p>
         </>
       )}
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-        {toast && (
-          <div
-            role="alert"
-            className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-ash/25 bg-pine px-5 py-2.5 shadow-[var(--shadow-pop)]"
-          >
-            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-amber" />
-            <span className="text-xs text-bone">{toast}</span>
-          </div>
-        )}
-      </div>
     </>
   );
 }
