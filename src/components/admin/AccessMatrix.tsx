@@ -1,17 +1,16 @@
 "use client";
 
-// Visibility management: a matrix of grantable people (rows) × applications
-// (columns). Phase 10b-3c — real grant/revoke against agv_application_access
-// (lifecycle records: granted_at + nullable revoked_at, never deleted),
-// replacing the earlier mock instant-toggle. Each click is now a real
-// network write; the cell shows a pending state while it's in flight and an
-// error toast if it fails, reverting to whatever the database actually
-// holds rather than assuming the click succeeded.
+// Visibility management — expandable rows: each row collapses to
+// avatar/name/role/summary-chip, expanding on click to reveal the person's
+// per-application checkboxes inline. Replaces the earlier person ×
+// application checkbox grid/Table (see git history) to reduce felt row
+// density and scale without adding a table column per application. The
+// previous pass's sticky-column-header CSS fix doesn't apply here — there's
+// no header row of per-application columns left to pin — and was removed
+// along with the Table it belonged to.
 
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
 import { toast } from "sonner";
-import { useReducedMotionPref } from "@/lib/preferences";
 import {
   fetchApplicationsForAccess,
   fetchGrantableProfiles,
@@ -22,14 +21,12 @@ import {
   type GrantableProfile,
   type LiveGrant,
 } from "@/lib/supabase/access";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 import SimplePagination from "@/components/admin/SimplePagination";
 
 const PAGE_SIZE = 5;
-
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 type LoadState =
   | { status: "loading" }
@@ -46,11 +43,11 @@ function grantKey(applicationId: string, profileId: string): string {
 }
 
 export default function AccessMatrix() {
-  const reduced = useReducedMotionPref();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,9 +89,7 @@ export default function AccessMatrix() {
       setState((s) => (s.status === "ready" ? { ...s, grants } : s));
     } catch (e) {
       toast.error(
-        e instanceof Error
-          ? `Couldn't update access: ${e.message}`
-          : "Couldn't update access."
+        e instanceof Error ? `Couldn't update access: ${e.message}` : "Couldn't update access."
       );
     } finally {
       setPending((p) => {
@@ -104,14 +99,6 @@ export default function AccessMatrix() {
       });
     }
   }
-
-  const enter = reduced
-    ? {}
-    : {
-        initial: { opacity: 0, y: 18 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.6, ease: EASE },
-      };
 
   const filteredProfiles =
     state.status === "ready"
@@ -138,21 +125,14 @@ export default function AccessMatrix() {
       <div className="shrink-0">
         <PeopleSectionHeading
           label="Access matrix"
-          description="Choose which applications each person can see. Check a box to grant access, uncheck it to revoke it. Changes save on their own and take effect right away."
+          description="Choose which applications each person can see. Click a person to expand their applications, then check a box to grant access or uncheck it to revoke. Changes save on their own and take effect right away."
         />
       </div>
 
       {state.status === "loading" ? (
         <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
-          <p
-            role="status"
-            aria-live="polite"
-            className="flex items-center justify-center gap-3 text-sm text-ash"
-          >
-            <span
-              aria-hidden
-              className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ash/25 border-t-signal"
-            />
+          <p role="status" aria-live="polite" className="flex items-center justify-center gap-3 text-sm text-ash">
+            <span aria-hidden className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ash/25 border-t-signal" />
             Loading access…
           </p>
         </div>
@@ -176,113 +156,114 @@ export default function AccessMatrix() {
             />
           </div>
 
-          <motion.section
-            {...enter}
-            aria-label="Application access by person"
-            className="glass mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl p-2 backdrop-blur-xl [&_[data-slot=table-container]]:h-full"
-          >
-            {/* Table's own table-container div already sets overflow-x-auto;
-                per the CSS overflow spec that silently forces overflow-y to
-                auto too, but with no explicit height it never has real
-                scrollable range — so position:sticky locks onto it as the
-                "nearest scrolling ancestor" without it ever actually
-                scrolling, and the header just rides along with the page
-                instead of sticking. Confirmed live by comparing scroll
-                behavior with and without a bounded height on that div.
-                Giving it h-full (via this arbitrary selector, since Table
-                doesn't expose a container className prop) makes it the
-                real, correctly-behaving scroll box. */}
-            <Table className="min-w-[720px]">
-              <TableHeader>
-                <TableRow className="border-ash/30 hover:bg-transparent">
-                  <TableHead
-                    scope="col"
-                    className="sticky top-0 z-10 h-auto w-64 bg-pine px-4 py-3 pl-1 text-left text-label font-semibold uppercase tracking-[0.12em] text-ash"
-                  >
-                    Person
-                  </TableHead>
-                  {state.applications.map((app) => (
-                    <TableHead key={app.id} scope="col" className="sticky top-0 z-10 h-auto whitespace-normal bg-pine px-4 py-4 text-left align-bottom font-normal">
-                      <span className="block font-mono text-label tracking-[0.1em] text-ash">
-                        {app.reference}
-                      </span>
-                      <span className="mt-1 block max-w-[160px] text-[13px] font-medium leading-snug text-bone">
-                        {app.title}
-                      </span>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pagedProfiles.length === 0 && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={state.applications.length + 1} className="px-4 py-8 text-center text-sm text-ash">
-                      No one matches &quot;{filter}&quot;.
-                    </TableCell>
-                  </TableRow>
-                )}
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
+            {pagedProfiles.length === 0 ? (
+              <div className="glass rounded-2xl py-8 text-center text-sm text-ash backdrop-blur-xl">
+                No one matches &quot;{filter}&quot;.
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-2">
                 {pagedProfiles.map((profile) => {
                   const count = state.grants.filter((g) => g.profile_id === profile.id).length;
+                  const isOpen = expandedId === profile.id;
                   return (
-                    <TableRow key={profile.id} className="border-ash/15 last:border-b-0 hover:bg-transparent">
-                      <TableHead scope="row" className="h-auto whitespace-normal py-5 pl-1 pr-4 text-left align-top font-normal">
-                        <span className="block font-display text-sm font-bold text-bone">
-                          {profile.name}
-                        </span>
-                        <span className="mt-1 inline-block rounded-full border border-ash/40 px-2.5 py-0.5 text-label uppercase tracking-[0.14em] text-ash">
-                          {profile.role}
-                        </span>
-                        <span
-                          aria-live="polite"
-                          className="mt-1.5 block text-label uppercase tracking-[0.1em] text-ash"
-                        >
-                          Can see {count} of {state.applications.length}
-                        </span>
-                      </TableHead>
-                      {state.applications.map((app) => {
-                        const key = grantKey(app.id, profile.id);
-                        const checked = state.grants.some(
-                          (g) => g.application_id === app.id && g.profile_id === profile.id
-                        );
-                        const busy = pending.has(key);
-                        return (
-                          <TableCell
-                            key={app.id}
-                            className="px-4 py-5 align-top [&:has([role=checkbox])]:pr-4"
+                    <li key={profile.id} className="glass rounded-2xl backdrop-blur-xl">
+                      <Collapsible
+                        open={isOpen}
+                        onOpenChange={(open) => setExpandedId(open ? profile.id : null)}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`${profile.name}, ${profile.role}, ${count} of ${state.applications.length} applications`}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
                           >
-                            <button
-                              type="button"
-                              role="checkbox"
-                              aria-checked={checked}
-                              aria-label={`${checked ? "Revoke" : "Grant"} ${profile.name}'s access to ${app.title}`}
-                              disabled={busy}
-                              onClick={() => handleToggle(app, profile)}
-                              className={`flex h-6 w-6 items-center justify-center rounded-md border transition disabled:opacity-50 ${
-                                checked
-                                  ? "border-signal bg-signal text-void"
-                                  : "border-ash/30 bg-void/40 text-transparent hover:border-ash/60"
-                              }`}
-                            >
-                              <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden>
-                                <path
-                                  d="M2.5 6.5l2.5 2.5 4.5-5"
-                                  stroke="currentColor"
-                                  strokeWidth="1.8"
-                                  fill="none"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
+                            <span className="flex min-w-0 items-center gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-signal/15 text-sm font-bold text-signal">
+                                {profile.name.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate font-display text-sm font-bold text-bone">
+                                  {profile.name}
+                                </span>
+                                <span className="mt-0.5 inline-block rounded-full border border-ash/40 px-2 py-0.5 text-label uppercase tracking-[0.1em] text-ash">
+                                  {profile.role}
+                                </span>
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-3">
+                              <span aria-live="polite" className="text-label uppercase tracking-[0.1em] text-ash">
+                                {count} of {state.applications.length} apps
+                              </span>
+                              <svg
+                                aria-hidden
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                              >
+                                <path d="m6 9 6 6 6-6" />
                               </svg>
-                            </button>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
+                            </span>
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <ul className="flex flex-col gap-1 border-t border-ash/15 px-4 py-3">
+                            {state.applications.map((app) => {
+                              const key = grantKey(app.id, profile.id);
+                              const checked = state.grants.some(
+                                (g) => g.application_id === app.id && g.profile_id === profile.id
+                              );
+                              const busy = pending.has(key);
+                              return (
+                                <li key={app.id} className="flex items-center justify-between gap-3 py-1.5">
+                                  <span className="min-w-0 text-sm">
+                                    <span className="block font-mono text-label tracking-[0.1em] text-ash">
+                                      {app.reference}
+                                    </span>
+                                    <span className="block truncate text-bone">{app.title}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    role="checkbox"
+                                    aria-checked={checked}
+                                    aria-label={`${checked ? "Revoke" : "Grant"} ${profile.name}'s access to ${app.title}`}
+                                    disabled={busy}
+                                    onClick={() => handleToggle(app, profile)}
+                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition disabled:opacity-50 ${
+                                      checked
+                                        ? "border-signal bg-signal text-void"
+                                        : "border-ash/30 bg-void/40 text-transparent hover:border-ash/60"
+                                    }`}
+                                  >
+                                    <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" aria-hidden>
+                                      <path
+                                        d="M2.5 6.5l2.5 2.5 4.5-5"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        fill="none"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </li>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </motion.section>
+              </ul>
+            )}
+          </div>
 
           <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-ash">
