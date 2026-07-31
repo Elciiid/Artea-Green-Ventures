@@ -56,7 +56,7 @@ export default function LoginPage() {
     const oauthError = params.get("error");
     if (oauthError === "oauth_unverified_domain") {
       setError(
-        "We couldn't verify your Microsoft account's email domain. Please create an account with your work email and a password instead."
+        "We couldn't verify your Microsoft account's email domain. Create an account with your work email and a password instead."
       );
       router.replace("/");
     } else if (oauthError === "oauth") {

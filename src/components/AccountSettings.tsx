@@ -320,8 +320,8 @@ function MfaSection({ account }: { account: Account }) {
 
       {excluded ? (
         <p className="mt-5 rounded-lg border border-ash/20 bg-void/40 px-4 py-3 text-sm text-ash">
-          Two-step verification is turned off for the shared demo accounts on
-          purpose. Sign in with a real account to set it up.
+          Two-step verification is off for the shared demo accounts. Sign in
+          with a real account to set it up.
         </p>
       ) : loading ? (
         <p role="status" className="mt-5 text-sm text-ash">

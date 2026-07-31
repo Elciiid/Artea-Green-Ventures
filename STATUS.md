@@ -57,6 +57,37 @@ Executed from a written plan (`docs/superpowers/plans/2026-07-31-people-director
 
 **shadcn additions:** `Dialog` and `Collapsible` were added via `npx shadcn@latest add` (neither existed before). Both checked against the standing "shadcn default silently reasserts" hazard catalogue before use: `DialogContent`'s `bg-popover` base class composes with this app's `glass backdrop-blur-xl` override exactly like the already-proven `AlertDialogContent` (identical base-class shape); `CollapsibleTrigger` injects zero default classNames at all when used with `asChild`, an even simpler case than the already-cleared `TooltipTrigger` precedent — no new hazard found.
 
+## Addendum: real AGV favicon (2026-07-31)
+Replaced the placeholder `src/app/icon.svg` (an abstract swoosh, never the real brand mark) with `src/app/icon.png` — the actual "AGV" + tree lockup cropped from `public/images/Artea Logo Assets-09-black.png`, chroma-keyed from its opaque white background to a real alpha channel, trimmed to content, and composited onto a padded 512×512 transparent canvas. First pass isolated just the tree glyph; corrected on request to keep the full lockup (AGV lettering + tree together), matching the mark as it actually appears elsewhere. Verified via Next.js's file-based icon convention: `<link rel="icon">` now points at `/icon.png` (512×512), served correctly, `tsc --noEmit` clean. Not yet committed — sitting in the working tree alongside the Directory/Access work pending the user's own review before anything is pushed.
+
+## Addendum: header shift between Home and People, and a starved Access list (2026-07-31)
+**Reported bug:** navigating from Home to the People section visibly shifts the top nav (account pill/avatar) a little to the right. Confirmed with two screenshots showing the avatar sitting further right on People than on Home.
+
+**Root cause:** `AppShell.tsx`'s non-bounded shell used `min-h-dvh` — an absolute viewport unit that ignores how much height its flex parent actually allocated to it. That parent's real available height is already viewport-minus-`DemoBanner`, so `min-h-dvh` silently overflowed it by exactly DemoBanner's height (~29px) on every non-bounded page, forcing a permanent ~15px scrollbar that isn't there on `boundedContent` pages (which already use `h-full` for the same reason, fixed in an earlier pass). Home has that scrollbar; People (bounded) doesn't — the scrollbar appearing/disappearing between the two is exactly the shift. Confirmed live: on Home, the outer scroll container measured `clientWidth 1265` vs `offsetWidth 1280` (scrollbar present) and the avatar sat at `right: 1241`; on People, `1280/1280` (no scrollbar) and the avatar sat at `right: 1256` — a 15px difference matching the screenshots exactly.
+
+**Fix:** `min-h-dvh` → `min-h-full` on the non-bounded path. `min-h-full` correctly floors at "whatever height the parent actually gave me" (properly accounting for DemoBanner) while still letting genuinely long pages (e.g. Applications Register) grow taller than that and scroll normally — re-verified `/admin` still shows its real scrollbar (`scrollHeight 742 > clientHeight 691`) and its footer still requires scrolling to reach, exactly as before. After the fix, Home's avatar position (`right: 1256`) now matches People's exactly, and a live Home→People navigation shows the avatar at the identical pixel position before and after.
+
+**Also found and fixed along the way:** while reproducing the above, found that the Access tab's row list was starved to less than one row's visible height (`clientHeight` as low as 74–94px) at common laptop viewport heights, because `boundedContent` pages still carried the same `py-12` (48px top+bottom) padding as regular pages. Reduced to `py-6` specifically for `boundedContent` (non-bounded pages unchanged, confirmed still `48px/48px` on Home) — recovers real space for the list (confirmed `clientHeight` 94→142px) without affecting the pinned-footer/no-page-scroll behavior.
+
+Both fixes: `tsc --noEmit` and `npm run lint` clean. Not yet committed.
+
+## Addendum: whole-app copy audit — removing AI-generated-sounding language (2026-07-31)
+Prompted by feedback that the app reads as "too AI-ish," narrowed to a concrete example: the Access tab's old copy ended with "Changes save on their own and take effect right away" — reassurance padding that tells the admin something already obvious from clicking a checkbox.
+
+**Method:** read every `.tsx` file in `src/` (all pages, components, toasts, placeholders, error messages) before changing anything, then grepped the whole tree for the classic AI-buzzword list (leverage, seamless, unlock, empower, utilize, facilitate, robust, comprehensive, streamline, successfully, please note, in order to). Zero hits in actual UI text — every match was in a code comment. The app's copy was already largely clean, consistent with the "Phase 9/16 plain-language passes" already on record.
+
+**Four real fixes, all confirmed against the specific tells (reassurance padding, hedging, unnecessary "please," vague reassurance):**
+- `AccessMatrix.tsx`: "...check a box to grant access or uncheck it to revoke. Changes save on their own and take effect right away." → "...check a box to grant or revoke access." (the flagged example itself — still present in the redesigned Access copy, now fixed)
+- `AccountSettings.tsx`: "...turned off for the shared demo accounts on purpose." → "...off for the shared demo accounts." (cut the hedge explaining an implementation detail no one needs reasoning for)
+- `src/app/page.tsx` (login): "...Please create an account with your work email..." → "...Create an account with your work email..." (unnecessary "please" on system UI)
+- `HomeLanding.tsx` hero: "...from first submission to final report, in one place, always up to date." → "...from first submission to final report, all in one place." ("always up to date" is vague reassurance describing no real mechanism)
+
+**Flagged, not touched — needs a call, not a guess:** the login page's "Welcome back, AGV team and partners." (warmer than the app's otherwise terse register — could be deliberate for a login screen) and the signup page's "we'll send a quick verification link" (borderline on "quick" as filler vs. genuine expectation-setting).
+
+**Separate finding, out of scope for a copy-only pass:** `src/components/home/HomeShell.tsx` (`HomePanel`/`HomePillLink` too) is now fully orphaned dead code — its only callers (Announcements/Directory/Resources) were all deleted in the earlier Home-cleanup pass. Not deleted here since removing a file isn't a tone edit.
+
+Verified: `tsc --noEmit` and `npm run lint` clean, no `aria-label`/`aria-describedby`/`alt` wiring touched (confirmed `PeopleSectionHeading`'s tooltip association is by Radix-generated id, not by string content), no user-generated content touched. Not yet committed.
+
 ## Done this session (and the sessions before it)
 
 ### Slice 0 — Foundation (7 commits: 3319ac3, 8b595c5, 60dbdc5, eb054d3, d8ea857, 430f0f7, 6165694)

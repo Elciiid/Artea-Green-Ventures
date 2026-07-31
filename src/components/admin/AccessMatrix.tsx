@@ -125,7 +125,7 @@ export default function AccessMatrix() {
       <div className="shrink-0">
         <PeopleSectionHeading
           label="Access matrix"
-          description="Choose which applications each person can see. Click a person to expand their applications, then check a box to grant access or uncheck it to revoke. Changes save on their own and take effect right away."
+          description="Choose which applications each person can see. Click a person to expand their applications, then check a box to grant or revoke access."
         />
       </div>
 

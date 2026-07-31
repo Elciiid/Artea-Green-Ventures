@@ -51,7 +51,7 @@ export default function HomeLanding() {
 
         <p className="mt-5 max-w-md text-sm leading-relaxed text-ash sm:text-base">
           Track environmental approvals from first submission to final
-          report, in one place, always up to date.
+          report, all in one place.
         </p>
 
         <div className="mt-7 flex flex-wrap items-center gap-3">

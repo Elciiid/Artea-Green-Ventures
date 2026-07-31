@@ -139,8 +139,17 @@ export default function AppShell({
   const menuNav = nav;
 
   return (
+    // min-h-full, not min-h-dvh: dvh is an absolute viewport unit, so it
+    // ignores how much height this div's flex parent actually allocated to
+    // it (that parent's own height is already viewport-minus-DemoBanner) —
+    // on any short-content page this silently overflowed the parent by
+    // exactly DemoBanner's height, forcing a permanent ~15px scrollbar
+    // that isn't there on pages using boundedContent (which already uses
+    // h-full for the same reason). min-h-full correctly floors at "whatever
+    // height the parent actually gave me" while still letting real content
+    // grow taller than that when it needs to.
     <div
-      className={`relative flex flex-col ${boundedContent ? "h-full overflow-hidden" : "min-h-dvh"}`}
+      className={`relative flex flex-col ${boundedContent ? "h-full overflow-hidden" : "min-h-full"}`}
     >
       <header className="sticky top-0 z-40 shrink-0">
         {/* A plain 3-child justify-between flex only looks centered when the
@@ -252,9 +261,9 @@ export default function AppShell({
 
       <main
         id="main-content"
-        className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8 ${
-          centerContent ? "justify-center" : ""
-        } ${boundedContent ? "min-h-0" : ""}`}
+        className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 sm:px-8 ${
+          boundedContent ? "py-6" : "py-12"
+        } ${centerContent ? "justify-center" : ""} ${boundedContent ? "min-h-0" : ""}`}
       >
         {children}
       </main>
