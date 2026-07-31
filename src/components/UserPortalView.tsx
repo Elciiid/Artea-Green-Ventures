@@ -7,58 +7,44 @@
 // rows to whatever this account holds a live grant for, so there's no
 // client-side visibility filtering here anymore.
 
-import { useEffect, useState } from "react";
 import ApplicationRegister from "@/components/ApplicationRegister";
-import RegisterStatus from "@/components/RegisterStatus";
+import SurfaceState from "@/components/SurfaceState";
 import { fetchApplications } from "@/lib/supabase/applications";
+import { useAsyncResource } from "@/lib/useAsyncResource";
 import { useSession } from "@/lib/session";
-import type { Application } from "@/lib/mock-data";
-
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; applications: Application[] };
 
 export default function UserPortalView() {
   const accountId = useSession((s) => s.account?.id);
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const { state } = useAsyncResource(
+    fetchApplications,
+    [accountId],
+    "Something went wrong loading your applications."
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ status: "loading" });
-    fetchApplications()
-      .then((applications) => {
-        if (!cancelled) setState({ status: "ready", applications });
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setState({
-            status: "error",
-            message:
-              e instanceof Error ? e.message : "Something went wrong loading your applications.",
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accountId]);
-
-  if (state.status === "loading") {
-    return <RegisterStatus eyebrow="Your portal" title="Your applications" kind="loading" />;
-  }
-  if (state.status === "error") {
+  if (state.status !== "ready") {
     return (
-      <RegisterStatus
-        eyebrow="Your portal"
-        title="Your applications"
-        kind="error"
-        message={state.message}
-      />
+      <div>
+        <p className="text-label font-semibold uppercase tracking-[0.18em] text-signal">
+          Your portal
+        </p>
+        <h1 className="mt-3 font-display text-4xl font-bold text-bone sm:text-5xl">
+          Your applications
+        </h1>
+        <SurfaceState
+          loading={state.status === "loading"}
+          loadingLabel="Loading applications…"
+          error={state.status === "error" ? state.message : null}
+          empty={false}
+          emptyContent={null}
+          className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl"
+        >
+          {null}
+        </SurfaceState>
+      </div>
     );
   }
 
-  const mine = state.applications;
+  const mine = state.data;
   return (
     <ApplicationRegister
       eyebrow="Your portal"

@@ -6,7 +6,7 @@
 // Select-driven picker), grouped into "Admin & staff" and "Clients". Click a
 // card to open RoleChangeDialog.
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@/lib/session";
 import {
@@ -14,13 +14,10 @@ import {
   setProfileRole,
   type ProfileForRoleAssignment,
 } from "@/lib/supabase/roles";
+import { useAsyncResource } from "@/lib/useAsyncResource";
 import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 import RoleChangeDialog from "@/components/admin/RoleChangeDialog";
-
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; profiles: ProfileForRoleAssignment[] };
+import SurfaceState from "@/components/SurfaceState";
 
 const ROLE_BADGE_STYLE: Record<Role, string> = {
   admin: "border-signal/40 text-signal",
@@ -29,25 +26,12 @@ const ROLE_BADGE_STYLE: Record<Role, string> = {
 };
 
 export default function PersonDirectory() {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const { state, refetch } = useAsyncResource(
+    fetchAllProfiles,
+    [],
+    "Couldn't load the directory."
+  );
   const [editing, setEditing] = useState<ProfileForRoleAssignment | null>(null);
-
-  const load = useCallback(async () => {
-    setState({ status: "loading" });
-    try {
-      const profiles = await fetchAllProfiles();
-      setState({ status: "ready", profiles });
-    } catch (e) {
-      setState({
-        status: "error",
-        message: e instanceof Error ? e.message : "Couldn't load the directory.",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   async function handleRoleChange(role: Role) {
     if (!editing) return;
@@ -55,13 +39,13 @@ export default function PersonDirectory() {
       await setProfileRole(editing.id, role);
       toast.success(`${editing.name} is now ${role}.`);
       setEditing(null);
-      await load();
+      refetch();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't change role.");
     }
   }
 
-  const profiles = state.status === "ready" ? state.profiles : [];
+  const profiles = state.status === "ready" ? state.data : [];
   const staffAndAdmin = profiles.filter((p) => p.role === "admin" || p.role === "staff");
   const clients = profiles.filter((p) => p.role === "client");
 
@@ -74,18 +58,23 @@ export default function PersonDirectory() {
         />
       </div>
 
-      {state.status === "loading" ? (
-        <p role="status" className="mt-5 text-sm text-ash">
-          Loading…
-        </p>
-      ) : state.status === "error" ? (
-        <p className="mt-5 text-sm text-amber">{state.message}</p>
-      ) : (
+      <SurfaceState
+        loading={state.status === "loading"}
+        loadingLabel="Loading…"
+        error={state.status === "error" ? state.message : null}
+        // A whole-directory empty state isn't reachable: reaching this tab at
+        // all requires a signed-in admin, who is themselves a row in the
+        // fetched profile list. The per-group "No one here yet." inside
+        // PersonGroup covers the only empty case that can actually occur.
+        empty={false}
+        emptyContent={null}
+        className="mt-5"
+      >
         <div className="mt-5 flex flex-col gap-8">
           <PersonGroup title="Admin & staff" people={staffAndAdmin} onSelect={setEditing} />
           <PersonGroup title="Clients" people={clients} onSelect={setEditing} />
         </div>
-      )}
+      </SurfaceState>
 
       <RoleChangeDialog
         person={editing}
