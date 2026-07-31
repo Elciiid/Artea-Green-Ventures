@@ -1,5 +1,5 @@
-import RoleAssignment from "@/components/admin/RoleAssignment";
+import { redirect } from "next/navigation";
 
-export default function PeopleRolesPage() {
-  return <RoleAssignment />;
+export default function PeopleRolesRedirect() {
+  redirect("/admin/people/directory");
 }

@@ -122,17 +122,19 @@ function PersonGroup({
               <button
                 type="button"
                 onClick={() => onSelect(person)}
+                aria-label={`Change role for ${person.name}, currently ${person.role}`}
                 className="glass flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-left backdrop-blur-xl transition hover:ring-1 hover:ring-signal/40"
               >
                 <span className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-signal/15 text-sm font-bold text-signal">
+                  <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-signal/15 text-sm font-bold text-signal">
                     {person.name.charAt(0).toUpperCase()}
                   </span>
-                  <span className="truncate font-display text-sm font-bold text-bone">
+                  <span aria-hidden className="truncate font-display text-sm font-bold text-bone">
                     {person.name}
                   </span>
                 </span>
                 <span
+                  aria-hidden
                   className={`shrink-0 rounded-full border px-2.5 py-0.5 text-label uppercase tracking-[0.14em] ${ROLE_BADGE_STYLE[person.role]}`}
                 >
                   {person.role}

@@ -1,4 +1,4 @@
-// Role-assignment reads/writes for the admin-only picker (src/components/admin/RoleAssignment.tsx).
+// Role-assignment reads/writes for the admin-only Directory tab (src/components/admin/PersonDirectory.tsx).
 //
 // Reading every profile is fine straight from the browser — "profiles — admin
 // read" (10b-1) already lets an admin SELECT every row. Writing a role is not:
