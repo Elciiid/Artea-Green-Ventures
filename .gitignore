@@ -17,6 +17,9 @@
 # vercel
 .vercel
 
+# local git worktrees (feature isolation), never part of the repo itself
+/.worktrees/
+
 # AI coding-session working docs — not application code, don't belong in
 # a repo meant to read as a real project. HANDOFF.md is a narrative meant
 # for pasting into a new chat session; docs/superpowers/ holds generated
