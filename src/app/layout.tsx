@@ -56,8 +56,17 @@ export default function RootLayout({
         </nav>
         <SupabaseAuthListener />
         {process.env.NODE_ENV === "development" && <AxeReporter />}
-        <DemoBanner />
-        <TooltipProvider>{children}</TooltipProvider>
+        {/* DemoBanner + the page content share the viewport via flex
+            distribution (not two independent h-dvh claims) so a
+            boundedContent page's "exactly viewport height" shell correctly
+            fills what's left after the banner, instead of overflowing by
+            the banner's own height. */}
+        <div className="flex h-dvh flex-col">
+          <DemoBanner />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <TooltipProvider>{children}</TooltipProvider>
+          </div>
+        </div>
         <Toaster position="bottom-center" />
       </body>
     </html>

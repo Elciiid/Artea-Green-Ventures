@@ -23,7 +23,11 @@ import {
   type LiveGrant,
 } from "@/lib/supabase/access";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
+import SimplePagination from "@/components/admin/SimplePagination";
+
+const PAGE_SIZE = 5;
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -45,6 +49,8 @@ export default function AccessMatrix() {
   const reduced = useReducedMotionPref();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [pending, setPending] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,12 +113,34 @@ export default function AccessMatrix() {
         transition: { duration: 0.6, ease: EASE },
       };
 
+  const filteredProfiles =
+    state.status === "ready"
+      ? state.profiles.filter((p) => {
+          const q = filter.trim().toLowerCase();
+          if (!q) return true;
+          return p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q);
+        })
+      : [];
+  const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedProfiles = filteredProfiles.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  function onFilterChange(value: string) {
+    setFilter(value);
+    setPage(1);
+  }
+
   return (
-    <>
-      <PeopleSectionHeading
-        label="Access matrix"
-        description="Choose which applications each person can see. Check a box to grant access, uncheck it to revoke it. Changes save on their own and take effect right away."
-      />
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0">
+        <PeopleSectionHeading
+          label="Access matrix"
+          description="Choose which applications each person can see. Check a box to grant access, uncheck it to revoke it. Changes save on their own and take effect right away."
+        />
+      </div>
 
       {state.status === "loading" ? (
         <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
@@ -137,22 +165,44 @@ export default function AccessMatrix() {
         </div>
       ) : (
         <>
+          <div className="mt-9 shrink-0">
+            <Input
+              type="search"
+              value={filter}
+              onChange={(e) => onFilterChange(e.target.value)}
+              placeholder="Filter by name or role…"
+              aria-label="Filter people by name or role"
+              className="max-w-sm border-ash/25 bg-void/40 text-bone"
+            />
+          </div>
+
           <motion.section
             {...enter}
             aria-label="Application access by person"
-            className="glass mt-9 rounded-2xl p-2 backdrop-blur-xl"
+            className="glass mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl p-2 backdrop-blur-xl [&_[data-slot=table-container]]:h-full"
           >
+            {/* Table's own table-container div already sets overflow-x-auto;
+                per the CSS overflow spec that silently forces overflow-y to
+                auto too, but with no explicit height it never has real
+                scrollable range — so position:sticky locks onto it as the
+                "nearest scrolling ancestor" without it ever actually
+                scrolling, and the header just rides along with the page
+                instead of sticking. Confirmed live by comparing scroll
+                behavior with and without a bounded height on that div.
+                Giving it h-full (via this arbitrary selector, since Table
+                doesn't expose a container className prop) makes it the
+                real, correctly-behaving scroll box. */}
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow className="border-ash/30 hover:bg-transparent">
                   <TableHead
                     scope="col"
-                    className="h-auto w-64 px-4 py-3 pl-1 text-left text-label font-semibold uppercase tracking-[0.12em] text-ash"
+                    className="sticky top-0 z-10 h-auto w-64 bg-pine px-4 py-3 pl-1 text-left text-label font-semibold uppercase tracking-[0.12em] text-ash"
                   >
                     Person
                   </TableHead>
                   {state.applications.map((app) => (
-                    <TableHead key={app.id} scope="col" className="h-auto whitespace-normal px-4 py-4 text-left align-bottom font-normal">
+                    <TableHead key={app.id} scope="col" className="sticky top-0 z-10 h-auto whitespace-normal bg-pine px-4 py-4 text-left align-bottom font-normal">
                       <span className="block font-mono text-label tracking-[0.1em] text-ash">
                         {app.reference}
                       </span>
@@ -164,7 +214,14 @@ export default function AccessMatrix() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {state.profiles.map((profile) => {
+                {pagedProfiles.length === 0 && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={state.applications.length + 1} className="px-4 py-8 text-center text-sm text-ash">
+                      No one matches &quot;{filter}&quot;.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {pagedProfiles.map((profile) => {
                   const count = state.grants.filter((g) => g.profile_id === profile.id).length;
                   return (
                     <TableRow key={profile.id} className="border-ash/15 last:border-b-0 hover:bg-transparent">
@@ -227,11 +284,19 @@ export default function AccessMatrix() {
             </Table>
           </motion.section>
 
-          <p className="mt-3 text-xs text-ash">
-            Administrators can always see every application.
-          </p>
+          <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-ash">
+              Administrators can always see every application.
+            </p>
+            <SimplePagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label="the access matrix"
+            />
+          </div>
         </>
       )}
-    </>
+    </div>
   );
 }

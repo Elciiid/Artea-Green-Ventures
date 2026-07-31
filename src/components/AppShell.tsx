@@ -69,21 +69,10 @@ const HOME_ITEM: NavItem = {
   match: (p) => p === "/home" || p.startsWith("/home/"),
 };
 
-// Only surfaced in the mobile nav Sheet, not the desktop pill nav — Directory
-// is already reachable from Home's tile row, so it doesn't need a top-level
-// slot next to Home/Applications. Since the Sheet's trigger is lg:hidden, at
-// desktop widths Home's tile row is the only path to Directory; the old
-// always-visible Menu button used to cover that gap too, before it became
-// mobile-only.
-const DIRECTORY_ITEM: NavItem = {
-  href: "/home/directory",
-  label: "Staff directory",
-  match: (p) => p.startsWith("/home/directory"),
-};
-
 export default function AppShell({
   expect,
   centerContent = false,
+  boundedContent = false,
   children,
 }: {
   expect?: Role | Role[];
@@ -91,6 +80,15 @@ export default function AppShell({
    * top-aligning it — appropriate for a landing/orientation surface (Home),
    * not for task pages where it pushes short content below the fold. */
   centerContent?: boolean;
+  /** Locks the shell to exactly the viewport height instead of a min-height
+   * that grows with content — header/nav and footer stay pinned, and the
+   * page itself never scrolls. Callers that need this (a list that can grow
+   * without bound) are responsible for giving their own content region
+   * `min-h-0 overflow-y-auto` so THAT region scrolls instead of the page —
+   * this prop only sets up the flex constraints that make that possible
+   * (no fixed pixel heights anywhere; header/main/footer just share the
+   * viewport via ordinary flex distribution). */
+  boundedContent?: boolean;
   children: React.ReactNode;
 }) {
   const account = useSession((s) => s.account);
@@ -138,11 +136,13 @@ export default function AppShell({
   }
 
   const nav = account.role === "client" ? recordsNav(account.role) : [HOME_ITEM, ...recordsNav(account.role)];
-  const menuNav = account.role === "client" ? nav : [...nav, DIRECTORY_ITEM];
+  const menuNav = nav;
 
   return (
-    <div className="relative flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-40">
+    <div
+      className={`relative flex flex-col ${boundedContent ? "h-full overflow-hidden" : "min-h-dvh"}`}
+    >
+      <header className="sticky top-0 z-40 shrink-0">
         {/* A plain 3-child justify-between flex only looks centered when the
             two flanking groups happen to be equal width — they aren't here
             (logo+Menu button on the left vs. name badge+avatar on the right,
@@ -254,12 +254,12 @@ export default function AppShell({
         id="main-content"
         className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8 ${
           centerContent ? "justify-center" : ""
-        }`}
+        } ${boundedContent ? "min-h-0" : ""}`}
       >
         {children}
       </main>
 
-      <footer className="relative z-10 border-t border-ash/15">
+      <footer className="relative z-10 shrink-0 border-t border-ash/15">
         <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div>

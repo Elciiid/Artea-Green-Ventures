@@ -10,7 +10,7 @@ export default function DemoBanner() {
   return (
     <aside
       aria-label="Environment notice"
-      className="relative z-20 border-b border-amber/40 bg-amber/10 px-6 py-1.5 text-center text-label font-semibold uppercase tracking-[0.12em] text-amber"
+      className="relative z-20 shrink-0 border-b border-amber/40 bg-amber/10 px-6 py-1.5 text-center text-label font-semibold uppercase tracking-[0.12em] text-amber"
     >
       Demo environment — sample data, not for real records
     </aside>
