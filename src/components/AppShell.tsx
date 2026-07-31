@@ -15,7 +15,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { roleHome, showDevTools, useSession, type Role } from "@/lib/session";
 import { useApplications } from "@/lib/applications";
 import { Wordmark } from "@/components/Logo";
@@ -99,7 +99,10 @@ export default function AppShell({
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const allowedRoles = expect === undefined ? null : Array.isArray(expect) ? expect : [expect];
+  const allowedRoles = useMemo(
+    () => (expect === undefined ? null : Array.isArray(expect) ? expect : [expect]),
+    [expect]
+  );
 
   useEffect(() => {
     if (!hydrated) return;

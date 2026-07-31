@@ -6,7 +6,7 @@
 // Select-driven picker), grouped into "Admin & staff" and "Clients". Click a
 // card to open RoleChangeDialog.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@/lib/session";
 import {
@@ -32,7 +32,7 @@ export default function PersonDirectory() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editing, setEditing] = useState<ProfileForRoleAssignment | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setState({ status: "loading" });
     try {
       const profiles = await fetchAllProfiles();
@@ -43,11 +43,11 @@ export default function PersonDirectory() {
         message: e instanceof Error ? e.message : "Couldn't load the directory.",
       });
     }
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   async function handleRoleChange(role: Role) {
     if (!editing) return;
