@@ -9,7 +9,7 @@
 // caller supplies onConfirm, wired to the exact same call RoleAssignment
 // used).
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Role } from "@/lib/session";
 import type { ProfileForRoleAssignment } from "@/lib/supabase/roles";
 import {
@@ -38,6 +38,10 @@ export default function RoleChangeDialog({
   const [pendingRole, setPendingRole] = useState<Role | null>(null);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (open && person) setPendingRole(person.role);
+  }, [open, person]);
+
   function handleOpenChange(next: boolean) {
     if (busy) return;
     if (next && person) setPendingRole(person.role);
@@ -50,9 +54,9 @@ export default function RoleChangeDialog({
     setBusy(true);
     try {
       await onConfirm(pendingRole);
+      setPendingRole(null);
     } finally {
       setBusy(false);
-      setPendingRole(null);
     }
   }
 
