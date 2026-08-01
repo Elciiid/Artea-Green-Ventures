@@ -20,6 +20,16 @@ import { getSupabaseServiceClient } from "@/lib/supabase/server";
 const VALID_ROLES = ["admin", "staff", "client"] as const;
 type ValidRole = (typeof VALID_ROLES)[number];
 
+// Canonical 8-4-4-4-12 hyphenated hex only. Postgres's uuid type accepts far
+// more than this on the `.eq("id", profileId)` below — it normalises case and
+// tolerates omitted hyphens and surrounding braces — so "{3F8A1C2D...}" and
+// "3f8a1c2d..." (no hyphens) both resolve to the SAME row as the canonical
+// form. The self-write guard further down compares strings in JS, which sees
+// those as different values. Pinning the input to one rendering here is what
+// keeps the JS comparison and the SQL comparison talking about the same thing;
+// case is then handled by comparing case-insensitively at the guard itself.
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 function isValidRole(value: unknown): value is ValidRole {
   return typeof value === "string" && (VALID_ROLES as readonly string[]).includes(value);
 }
@@ -35,7 +45,12 @@ export async function POST(request: Request) {
 
     const profileId = body.profileId;
     const role = body.role;
-    if (typeof profileId !== "string" || !profileId || !isValidRole(role)) {
+    if (
+      typeof profileId !== "string" ||
+      !profileId ||
+      !UUID_RE.test(profileId) ||
+      !isValidRole(role)
+    ) {
       return NextResponse.json({ error: "Invalid profileId or role." }, { status: 400 });
     }
 
@@ -78,17 +93,28 @@ export async function POST(request: Request) {
     // was requested — including a no-op write of their current role. The rule
     // is deliberately "never your own profileId" rather than "never lower your
     // own privilege": the latter is harder to reason about (and to keep
-    // correct as roles change), and this route is the only path to a
-    // service-role write on agv_profiles.role. That matters because the write
-    // below bypasses RLS and the agv_prevent_self_role_escalation trigger
-    // entirely (a service-role connection has no JWT subject, so auth.uid() is
-    // null — see the file header), and that trigger only blocks escalation
-    // anyway, never demotion. Without this check a sole admin could demote
-    // themselves to staff/client and lock the org out of /admin with no
+    // correct as roles change), and this route is the only path by which an
+    // admin can write *another* profile's role. (It is not the app's only
+    // service-role write to agv_profiles.role at all — src/app/auth/callback
+    // does one too, for domain-based role assignment on brand-new OAuth
+    // accounts; that one is gated on the isNewAccount window, so an
+    // established admin can't reach it, but it exists.) That matters because
+    // the write below bypasses RLS and the agv_prevent_self_role_escalation
+    // trigger entirely (a service-role connection has no JWT subject, so
+    // auth.uid() is null — see the file header), and that trigger only blocks
+    // escalation anyway, never demotion. Without this check a sole admin could
+    // demote themselves to staff/client and lock the org out of /admin with no
     // self-service way back in. Placed before getSupabaseServiceClient() so
     // the privileged client is never even constructed for a self-targeted
     // request. Admin-to-admin changes are unaffected.
-    if (profileId === user.id) {
+    //
+    // Compared case-insensitively because Postgres's uuid equality on the
+    // `.eq("id", profileId)` write below is case-insensitive: an admin passing
+    // their own id in uppercase would otherwise slip past a `===` compare and
+    // still hit their own row. The other renderings uuid equality accepts
+    // (hyphen-omitted, brace-wrapped) never get this far — UUID_RE rejected
+    // them with a 400 back at request validation.
+    if (profileId.toLowerCase() === user.id.toLowerCase()) {
       return NextResponse.json(
         { error: "You can't change your own role." },
         { status: 403 }
