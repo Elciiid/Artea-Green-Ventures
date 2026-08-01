@@ -56,11 +56,11 @@ export default function AdminDashboard() {
       emptyState={
         <div className="rounded-md border border-dashed border-ash/30 bg-pine/40 px-6 py-16 text-center">
           <p className="text-label font-semibold uppercase tracking-[0.18em] text-ash">
-            Nothing on record yet
+            Nothing to show yet
           </p>
           <p className="mt-2 text-sm text-ash">
-            No applications on record yet. They&apos;ll appear here as soon as
-            one is submitted.
+            No applications have been submitted yet. They&apos;ll appear here
+            as soon as one comes in.
           </p>
         </div>
       }

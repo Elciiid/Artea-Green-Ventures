@@ -39,7 +39,7 @@ export function useAsyncResource<T>(
         if (!cancelled) {
           setState({
             status: "error",
-            message: e instanceof Error ? e.message : fallbackMessage,
+            message: e instanceof Error && e.message ? e.message : fallbackMessage,
           });
         }
       });
@@ -50,7 +50,9 @@ export function useAsyncResource<T>(
     // through, exactly as it would be if the effect were written inline at the
     // call site. `fetcher`/`fallbackMessage` are intentionally excluded — a
     // caller passing an inline arrow fetcher would otherwise re-fetch on every
-    // render — so this rule can't be statically satisfied here.
+    // render — so this rule can't be statically satisfied here. `deps` must
+    // also be a fixed-length array across renders for a given call site, since
+    // React requires a stable-length dependency array per useEffect call.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, reloadCount]);
 
