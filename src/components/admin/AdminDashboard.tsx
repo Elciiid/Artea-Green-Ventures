@@ -34,6 +34,7 @@ export default function AdminDashboard() {
           loading={state.status === "loading"}
           loadingLabel="Loading applications…"
           error={state.status === "error" ? state.message : null}
+          errorHeading="We couldn&apos;t load applications"
           empty={false}
           emptyContent={null}
           className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl"

@@ -19,6 +19,7 @@ export default function SurfaceState({
   loading,
   loadingLabel,
   error,
+  errorHeading,
   empty,
   emptyContent,
   className,
@@ -28,6 +29,8 @@ export default function SurfaceState({
   loadingLabel: string;
   /** The message to announce, or null when the surface isn't in an error state. */
   error: string | null;
+  /** Shown above the error message on surfaces that previously had a heading here. Omit to keep the plain single-message look (PersonDirectory, ActivityLog never had one). */
+  errorHeading?: string;
   empty: boolean;
   /** Each surface writes its own empty copy — there is no generic default. */
   emptyContent: ReactNode;
@@ -56,6 +59,11 @@ export default function SurfaceState({
   if (error) {
     return (
       <div className={className}>
+        {errorHeading && (
+          <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+            {errorHeading}
+          </h2>
+        )}
         <p role="alert" className="text-sm text-amber">
           {error}
         </p>

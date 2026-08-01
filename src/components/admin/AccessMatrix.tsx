@@ -121,6 +121,7 @@ export default function AccessMatrix() {
         loading={state.status === "loading"}
         loadingLabel="Loading access…"
         error={state.status === "error" ? state.message : null}
+        errorHeading="We couldn&apos;t load access"
         // The two empty cases (nobody at all vs. nobody matching the filter)
         // are handled below, inside the scroll region, so the filter input
         // stays on screen and a filter that matches nothing can be cleared.
