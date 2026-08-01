@@ -54,7 +54,6 @@ export default function RoleChangeDialog({
     setBusy(true);
     try {
       await onConfirm(pendingRole);
-      setPendingRole(null);
     } finally {
       setBusy(false);
     }
