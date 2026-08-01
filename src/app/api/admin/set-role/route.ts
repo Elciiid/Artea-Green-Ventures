@@ -74,6 +74,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Admin access required." }, { status: 403 });
     }
 
+    // No admin may write to their OWN role through this route, whatever role
+    // was requested — including a no-op write of their current role. The rule
+    // is deliberately "never your own profileId" rather than "never lower your
+    // own privilege": the latter is harder to reason about (and to keep
+    // correct as roles change), and this route is the only path to a
+    // service-role write on agv_profiles.role. That matters because the write
+    // below bypasses RLS and the agv_prevent_self_role_escalation trigger
+    // entirely (a service-role connection has no JWT subject, so auth.uid() is
+    // null — see the file header), and that trigger only blocks escalation
+    // anyway, never demotion. Without this check a sole admin could demote
+    // themselves to staff/client and lock the org out of /admin with no
+    // self-service way back in. Placed before getSupabaseServiceClient() so
+    // the privileged client is never even constructed for a self-targeted
+    // request. Admin-to-admin changes are unaffected.
+    if (profileId === user.id) {
+      return NextResponse.json(
+        { error: "You can't change your own role." },
+        { status: 403 }
+      );
+    }
+
     const admin = getSupabaseServiceClient();
     const { error: updateError, data: updated } = await admin
       .from("agv_profiles")
