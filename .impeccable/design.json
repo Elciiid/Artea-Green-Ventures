@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-01T04:25:01Z",
+  "title": "Design System: AGV Portal",
+  "extensions": {
+    "colorMeta": {
+      "forest-signal": {
+        "role": "primary",
+        "displayName": "Forest Signal",
+        "canonical": "oklch(47% 0.11 145)",
+        "tonalRamp": [
+          "oklch(15% 0.05 145)",
+          "oklch(25% 0.07 145)",
+          "oklch(35% 0.09 145)",
+          "oklch(47% 0.11 145)",
+          "oklch(58% 0.11 145)",
+          "oklch(70% 0.09 145)",
+          "oklch(82% 0.06 145)",
+          "oklch(93% 0.03 145)"
+        ]
+      },
+      "canopy-contour": {
+        "role": "secondary",
+        "displayName": "Canopy Contour",
+        "canonical": "oklch(51% 0.09 150)",
+        "tonalRamp": [
+          "oklch(17% 0.04 150)",
+          "oklch(27% 0.06 150)",
+          "oklch(38% 0.08 150)",
+          "oklch(51% 0.09 150)",
+          "oklch(62% 0.08 150)",
+          "oklch(73% 0.06 150)",
+          "oklch(84% 0.04 150)",
+          "oklch(94% 0.02 150)"
+        ]
+      },
+      "trail-amber": {
+        "role": "status",
+        "displayName": "Trail Amber",
+        "canonical": "oklch(46% 0.09 70)",
+        "tonalRamp": [
+          "oklch(16% 0.04 70)",
+          "oklch(26% 0.06 70)",
+          "oklch(36% 0.08 70)",
+          "oklch(46% 0.09 70)",
+          "oklch(58% 0.09 70)",
+          "oklch(70% 0.07 70)",
+          "oklch(82% 0.05 70)",
+          "oklch(93% 0.02 70)"
+        ]
+      },
+      "fogged-clearing": {
+        "role": "neutral",
+        "displayName": "Fogged Clearing",
+        "canonical": "oklch(95% 0.004 145)",
+        "tonalRamp": [
+          "oklch(20% 0.004 145)",
+          "oklch(32% 0.004 145)",
+          "oklch(45% 0.004 145)",
+          "oklch(58% 0.004 145)",
+          "oklch(70% 0.004 145)",
+          "oklch(82% 0.004 145)",
+          "oklch(90% 0.004 145)",
+          "oklch(95% 0.004 145)"
+        ]
+      },
+      "morning-cloud": {
+        "role": "neutral",
+        "displayName": "Morning Cloud",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "oklch(20% 0 0)",
+          "oklch(34% 0 0)",
+          "oklch(48% 0 0)",
+          "oklch(62% 0 0)",
+          "oklch(76% 0 0)",
+          "oklch(88% 0 0)",
+          "oklch(96% 0 0)",
+          "oklch(100% 0 0)"
+        ]
+      },
+      "forest-floor": {
+        "role": "neutral",
+        "displayName": "Forest Floor",
+        "canonical": "oklch(23% 0.02 150)",
+        "tonalRamp": [
+          "oklch(10% 0.015 150)",
+          "oklch(23% 0.02 150)",
+          "oklch(35% 0.02 150)",
+          "oklch(48% 0.02 150)",
+          "oklch(61% 0.015 150)",
+          "oklch(74% 0.01 150)",
+          "oklch(87% 0.006 150)",
+          "oklch(95% 0.003 150)"
+        ]
+      },
+      "moss-ash": {
+        "role": "neutral",
+        "displayName": "Moss Ash",
+        "canonical": "oklch(48% 0.02 130)",
+        "tonalRamp": [
+          "oklch(18% 0.015 130)",
+          "oklch(28% 0.018 130)",
+          "oklch(38% 0.02 130)",
+          "oklch(48% 0.02 130)",
+          "oklch(60% 0.018 130)",
+          "oklch(72% 0.014 130)",
+          "oklch(84% 0.008 130)",
+          "oklch(94% 0.004 130)"
+        ]
+      },
+      "deep-canopy": {
+        "role": "surface",
+        "displayName": "Deep Canopy",
+        "canonical": "oklch(26% 0.04 155)",
+        "tonalRamp": [
+          "oklch(12% 0.02 155)",
+          "oklch(19% 0.03 155)",
+          "oklch(26% 0.04 155)",
+          "oklch(38% 0.045 155)",
+          "oklch(51% 0.04 155)",
+          "oklch(65% 0.03 155)",
+          "oklch(80% 0.015 155)",
+          "oklch(93% 0.006 155)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page and section headlines, hero copy. Outfit." },
+      "body": { "displayName": "Body", "purpose": "All paragraph copy, form labels, navigation, general UI text. Inter." },
+      "label": { "displayName": "Label", "purpose": "Role badges, section eyebrows, small referential tags. JetBrains Mono, uppercase, tracked out — the 0.75rem type-scale floor." }
+    },
+    "shadows": [
+      { "name": "panel", "value": "0 18px 44px -22px rgb(30 42 31 / 0.18)", "purpose": "Default resting shadow under glass/elevated panels — a quiet second layer under translucency, never the primary depth cue." },
+      { "name": "pop", "value": "0 14px 34px -12px rgb(30 42 31 / 0.2)", "purpose": "Stronger lift for more prominently raised elements, e.g. an open dialog." }
+    ],
+    "motion": [
+      { "name": "press", "value": "transform 0.1s ease-out", "purpose": "Buttons/interactive controls nudge down one pixel on active/press for tactile feedback." },
+      { "name": "step-pulse", "value": "2.4s ease-out infinite", "purpose": "Pulsing ring on the current/active stage of a compliance stepper, using the Trail Amber color." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action button — grant/save/confirm actions.",
+      "html": "<button class=\"ds-btn-primary\">Grant access</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; background: var(--color-signal, #2f7040); color: var(--color-void, #f1f3f1); border: none; border-radius: 8px; font-family: var(--font-sans, Inter, sans-serif); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; } .ds-btn-primary:hover { background: color-mix(in oklab, var(--color-signal, #2f7040) 80%, transparent); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-signal, #2f7040); outline-offset: 2px; box-shadow: 0 0 0 3px rgb(47 112 64 / 0.3); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Role Badge",
+      "kind": "chip",
+      "refersTo": "badge-role",
+      "description": "Pill badge marking a person's role (admin/staff/client) or an application's status.",
+      "html": "<span class=\"ds-badge-role\">Admin</span>",
+      "css": ".ds-badge-role { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--color-signal, #2f7040); color: var(--color-signal, #2f7040); font-family: var(--font-mono, \"JetBrains Mono\", monospace); font-size: 0.75rem; line-height: 1.35; letter-spacing: 0.14em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Directory Card",
+      "kind": "card",
+      "refersTo": "card-directory",
+      "description": "Glass-surfaced row card used in the People Directory — avatar, name, and role badge, expandable on click.",
+      "html": "<div class=\"ds-card-directory\"><span class=\"ds-card-avatar\">AA</span><div class=\"ds-card-body\"><span class=\"ds-card-name\">A. Merced</span><span class=\"ds-badge-role\">Admin</span></div></div>",
+      "css": ".ds-card-directory { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-radius: 18px; background: rgb(255 255 255 / 0.6); border: 1px solid rgb(255 255 255 / 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); transition: box-shadow 0.15s; } .ds-card-directory:hover { box-shadow: 0 0 0 1px rgb(47 112 64 / 0.4) inset; } .ds-card-directory:focus-visible { outline: 2px solid var(--color-signal, #2f7040); outline-offset: 2px; } .ds-card-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 9999px; background: rgb(47 112 64 / 0.15); color: var(--color-signal, #2f7040); font-weight: 700; font-size: 14px; font-family: var(--font-sans, Inter, sans-serif); } .ds-card-body { display: flex; flex-direction: column; gap: 4px; } .ds-card-name { font-family: var(--font-sans, Inter, sans-serif); font-size: 14px; color: var(--color-bone, #1e2a1f); }"
+    },
+    {
+      "name": "Filter Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Text input, e.g. the Access tab's name/role filter.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Filter by name or role\" />",
+      "css": ".ds-input { height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--color-ash, #6b7264); background: var(--color-pine, #ffffff); color: var(--color-bone, #1e2a1f); font-family: var(--font-sans, Inter, sans-serif); font-size: 14px; } .ds-input::placeholder { color: var(--color-ash, #6b7264); } .ds-input:focus-visible { outline: 2px solid var(--color-signal, #2f7040); outline-offset: 2px; border-color: var(--color-signal, #2f7040); }"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Header navigation pill, active/inactive states.",
+      "html": "<a href=\"#\" class=\"ds-nav-link ds-nav-link--active\">People</a>",
+      "css": ".ds-nav-link { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 9999px; font-family: var(--font-sans, Inter, sans-serif); font-size: 14px; color: var(--color-bone, #1e2a1f); text-decoration: none; transition: background 0.15s, color 0.15s; } .ds-nav-link:hover { background: rgb(47 112 64 / 0.08); } .ds-nav-link:focus-visible { outline: 2px solid var(--color-signal, #2f7040); outline-offset: 2px; } .ds-nav-link--active { background: rgb(47 112 64 / 0.12); color: var(--color-signal, #2f7040); font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Canopy Registry",
+    "overview": "AGV Portal is an official record shot through with living green: the institutional trust of a compliance ledger, carried by a warm forest palette instead of enterprise gray. It is warm and approachable but still precise — human enough that staff and clients don't feel like they're fighting a government form, exact enough that nothing about role, access, or application status is ever ambiguous. The system explicitly avoids two failure modes: it should never read as a cold, gray enterprise dashboard, and it should never reach for bounce, gradients, or decorative flourish to manufacture warmth it hasn't earned structurally.\n\nDepth is glass-first: frosted, translucent panels (.glass) floating over a soft green gradient wash are the system's primary depth cue, not drop shadows — shadows exist only as a quiet second layer underneath. Interaction feedback is tactile and confident: buttons press down a physical pixel on click, focus rings glow in the accent green, and directory cards pick up a signal-colored ring on hover — restrained, but never inert.\n\nOne fixed light identity — there is no dark mode, and no user-facing theme toggle exists. A single saturated accent (Forest Signal) carries almost all interactive emphasis; every other color is either neutral or role-coded (Trail Amber = in progress, Canopy Contour = resolved), never decorative.",
+    "keyCharacteristics": [
+      "Warm forest/cream palette standing in for an otherwise institutional compliance product",
+      "Glass/frosted panels as the primary depth cue; shadows are a quiet second layer",
+      "One accent color only — everything else is neutral or semantically role-coded",
+      "Tactile press/focus feedback on every interactive control",
+      "A single fixed light theme; no dark mode exists anywhere in the app"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Forest Signal is the only saturated color used for interactive emphasis anywhere in the system. A second bright accent is a regression, not a design choice.", "section": "colors" },
+      { "name": "The No Second Theme Rule", "body": "This is one fixed light identity, not \"light mode\" among several — there is no dark mode block and no user-facing theme toggle. Any dark:-prefixed utility a fetched component ships with is inert by construction; it must stay that way.", "section": "colors" },
+      { "name": "The Label Floor Rule", "body": "0.75rem (Tailwind's text-xs) is the smallest type size anywhere in the system. It is the type scale's own minimum, not an arbitrary cutoff — nothing renders below it.", "section": "typography" },
+      { "name": "The Glass-Over-Texture Rule", "body": ".glass is only ever used over the gradient wash or imagery, never over flat page background — blur against a flat color has no visual payoff and is a wasted effect.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Forest Signal as the only saturated interactive accent — new components should reach for it before any other color.",
+      "Do treat glass/translucency as the default way to elevate a floating panel; reach for shadow-panel/shadow-pop as a secondary reinforcement, not the primary signal.",
+      "Do give every interactive control the same press (translate-y-px) and focus-visible (2px Forest Signal outline + ring glow) treatment already standard on buttons and inputs.",
+      "Do keep role/status color-coding semantic: Forest Signal = interactive, Canopy Contour = resolved, Trail Amber = in-progress/destructive. One meaning per color."
+    ],
+    "donts": [
+      "Don't introduce a second saturated accent color or a dedicated \"red\" for destructive actions — this system deliberately reuses Trail Amber at different opacities instead.",
+      "Don't add a dark mode or any user-facing theme toggle — this is one fixed light identity by explicit prior decision (Phase 19 removed the previous toggle).",
+      "Don't apply .glass over flat page background — it only belongs over the gradient wash or imagery.",
+      "Don't reach for bounce/elastic easing or gradient-heavy decoration to manufacture warmth — the palette and glass panels already carry the warmth; motion should stay purposeful and restrained (respecting prefers-reduced-motion everywhere, as the codebase already does)."
+    ]
+  }
+}
