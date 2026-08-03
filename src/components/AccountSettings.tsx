@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { isSeedAccount, showDevTools, useSession, type Account } from "@/lib/session";
+import { isInvalidCredentialsError, isSeedAccount, showDevTools, useSession, type Account } from "@/lib/session";
 import { formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +90,12 @@ function PasswordSection({ email }: { email: string }) {
         password: current,
       });
       if (reauthError) {
-        setError("Your current password is incorrect.");
+        if (isInvalidCredentialsError(reauthError)) {
+          setError("Your current password is incorrect.");
+        } else {
+          console.error("Password-change reauth failed:", reauthError);
+          setError("Something went wrong confirming your password. Try again in a moment.");
+        }
         setBusy(false);
         return;
       }
