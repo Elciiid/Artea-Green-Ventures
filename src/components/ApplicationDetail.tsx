@@ -304,7 +304,7 @@ export default function ApplicationDetail({
                   View
                 </button>
               ) : canEdit && onUploadDocumentProp && doc.id ? (
-                <label className="shrink-0 cursor-pointer text-sm font-medium text-signal underline decoration-ash/40 decoration-1 underline-offset-4 transition hover:decoration-signal aria-disabled:cursor-not-allowed aria-disabled:text-ash aria-disabled:no-underline">
+                <label className="shrink-0 cursor-pointer text-sm font-medium text-signal underline decoration-ash/40 decoration-1 underline-offset-4 transition hover:decoration-signal aria-disabled:cursor-not-allowed aria-disabled:text-ash aria-disabled:no-underline border border-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
                   <input
                     type="file"
                     className="sr-only"
