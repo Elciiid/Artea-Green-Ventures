@@ -9,7 +9,7 @@
 // caller supplies onConfirm, wired to the exact same call RoleAssignment
 // used).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Role } from "@/lib/session";
 import type { ProfileForRoleAssignment } from "@/lib/supabase/roles";
 import {
@@ -38,9 +38,16 @@ export default function RoleChangeDialog({
   const [pendingRole, setPendingRole] = useState<Role | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // `open` is driven externally (PersonDirectory sets it via `editing !==
+  // null`), so Radix's own onOpenChange never fires for that transition —
+  // it only fires for Radix-internal triggers (Escape, overlay click). Pre-
+  // selecting the current role has to key off the props directly instead.
+  useEffect(() => {
+    if (open && person) setPendingRole(person.role);
+  }, [open, person]);
+
   function handleOpenChange(next: boolean) {
     if (busy) return;
-    if (next && person) setPendingRole(person.role);
     if (!next) setPendingRole(null);
     onOpenChange(next);
   }
@@ -95,6 +102,12 @@ export default function RoleChangeDialog({
                 </label>
               ))}
             </fieldset>
+
+            {pendingRole === "admin" && pendingRole !== person.role && (
+              <p role="alert" className="mt-3 text-xs leading-relaxed text-amber">
+                This grants full, unconditional access to every application.
+              </p>
+            )}
 
             <DialogFooter className="mt-4">
               <Button
