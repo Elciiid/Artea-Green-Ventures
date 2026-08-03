@@ -69,9 +69,15 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const { error } = await signIn(email, password);
+    const { error, kind } = await signIn(email, password);
     setBusy(false);
-    if (error) setError("That email and password don't match an account.");
+    if (error) {
+      setError(
+        kind === "invalid_credentials"
+          ? "That email and password don't match an account."
+          : "Something went wrong signing in. Try again in a moment."
+      );
+    }
   }
 
   async function onMicrosoft() {

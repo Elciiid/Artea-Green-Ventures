@@ -13,7 +13,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { isSeedAccount, showDevTools, useSession, type Account } from "@/lib/session";
+import {
+  isInvalidCredentialsError,
+  isMfaVerificationFailedError,
+  isSeedAccount,
+  showDevTools,
+  useSession,
+  type Account,
+} from "@/lib/session";
 import { formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,8 +111,16 @@ function PasswordSection({ email }: { email: string }) {
         password: current,
       });
       if (reauthError) {
-        setError("Your current password is incorrect.");
-        setInvalidFields({ current: true, next: false, confirm: false });
+        if (isInvalidCredentialsError(reauthError)) {
+          setError("Your current password is incorrect.");
+          setInvalidFields({ current: true, next: false, confirm: false });
+        } else {
+          // Not attributable to what the user typed — leave invalidFields at
+          // NO_INVALID_FIELDS (clearError() above already reset it) rather
+          // than flagging a field that isn't actually at fault.
+          console.error("Password-change reauth failed:", reauthError);
+          setError("Something went wrong confirming your password. Try again in a moment.");
+        }
         setBusy(false);
         return;
       }
@@ -283,7 +298,12 @@ function MfaSection({ account }: { account: Account }) {
         code: code.trim(),
       });
       if (verifyError) {
-        setError("That code didn't match. Check your authenticator app and try again.");
+        if (isMfaVerificationFailedError(verifyError)) {
+          setError("That code didn't match. Check your authenticator app and try again.");
+        } else {
+          console.error("MFA verification failed:", verifyError);
+          setError("Something went wrong verifying that code. Try again in a moment.");
+        }
         setBusy(false);
         return;
       }

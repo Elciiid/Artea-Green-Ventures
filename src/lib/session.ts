@@ -80,6 +80,38 @@ export function isSeedAccount(email: string): boolean {
   return DEV_ACCOUNTS.some((a) => a.email === email.toLowerCase());
 }
 
+/**
+ * True when a Supabase Auth error genuinely means "wrong email or password" —
+ * as opposed to a config, network, or server-side failure that would
+ * otherwise look identical to a caller that only checks `if (error)`.
+ * `invalid_credentials` is GoTrue's own error code for this case, present
+ * on any AuthApiError the server itself returned (as opposed to one
+ * constructed client-side, e.g. from a thrown config error).
+ */
+export function isInvalidCredentialsError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "invalid_credentials"
+  );
+}
+
+/**
+ * True when a Supabase Auth MFA error genuinely means "the code you entered
+ * doesn't match" — as opposed to an expired/already-used challenge, an IP
+ * mismatch, rate limiting, or a config/network failure that would otherwise
+ * look identical to a caller that only checks `if (error)`.
+ */
+export function isMfaVerificationFailedError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "mfa_verification_failed"
+  );
+}
+
 type ProfileRow = {
   id: string;
   name: string;
@@ -138,7 +170,10 @@ type SessionState = {
   account: Account | null;
   /** true once the initial auth state has resolved */
   hydrated: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null; kind?: "invalid_credentials" | "unexpected" }>;
   /** Redirects the browser to the provider's login — resolves only on failure. */
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -177,11 +212,22 @@ export const useSession = create<SessionState>((set, get) => ({
         email: email.trim(),
         password,
       });
-      if (error) return { error: error.message };
-      // onAuthStateChange will populate `account`.
-      return { error: null };
+      if (!error) return { error: null }; // onAuthStateChange will populate `account`.
+      if (isInvalidCredentialsError(error)) {
+        return { error: error.message, kind: "invalid_credentials" };
+      }
+      // Anything else (missing config, network failure, rate limiting, a
+      // GoTrue outage...) is not a wrong password — the caller should tell
+      // the user something distinct from that. The real cause still goes to
+      // the console since callers don't get to see it.
+      console.error("Sign-in failed:", error);
+      return { error: error.message, kind: "unexpected" };
     } catch (e) {
-      return { error: e instanceof Error ? e.message : "Auth is not configured." };
+      console.error("Sign-in failed:", e);
+      return {
+        error: e instanceof Error ? e.message : "Auth is not configured.",
+        kind: "unexpected",
+      };
     }
   },
 
