@@ -112,9 +112,9 @@ function PersonGroup({
 }) {
   return (
     <section>
-      <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+      <h3 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
         {title}
-      </h2>
+      </h3>
       {people.length === 0 ? (
         <p className="mt-3 text-sm text-ash">No one here yet.</p>
       ) : (

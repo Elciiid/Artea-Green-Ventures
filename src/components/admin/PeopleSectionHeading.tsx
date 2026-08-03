@@ -22,9 +22,9 @@ export default function PeopleSectionHeading({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
+      <h2 className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
         {label}
-      </span>
+      </h2>
       <Tooltip>
         <TooltipTrigger asChild>
           <button

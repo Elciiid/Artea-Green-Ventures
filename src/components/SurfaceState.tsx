@@ -20,6 +20,7 @@ export default function SurfaceState({
   loadingLabel,
   error,
   errorHeading,
+  errorHeadingLevel = "h2",
   empty,
   emptyContent,
   className,
@@ -31,6 +32,8 @@ export default function SurfaceState({
   error: string | null;
   /** Shown above the error message on surfaces that previously had a heading here. Omit to keep the plain single-message look (PersonDirectory, ActivityLog never had one). */
   errorHeading?: string;
+  /** Defaults to h2 (correct when this surface's own page heading is an h1, e.g. AdminDashboard/UserPortalView). Pass "h3" when a section heading between the page h1 and this surface is already an h2 (e.g. AccessMatrix, nested under PeopleSectionHeading's h2), so the error heading nests correctly instead of becoming a sibling. */
+  errorHeadingLevel?: "h2" | "h3";
   empty: boolean;
   /** Each surface writes its own empty copy — there is no generic default. */
   emptyContent: ReactNode;
@@ -57,12 +60,13 @@ export default function SurfaceState({
   }
 
   if (error) {
+    const ErrorHeadingTag = errorHeadingLevel;
     return (
       <div className={className}>
         {errorHeading && (
-          <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+          <ErrorHeadingTag className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
             {errorHeading}
-          </h2>
+          </ErrorHeadingTag>
         )}
         <p role="alert" className="text-sm text-amber">
           {error}

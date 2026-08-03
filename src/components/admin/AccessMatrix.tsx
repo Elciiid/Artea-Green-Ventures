@@ -122,6 +122,10 @@ export default function AccessMatrix() {
         loadingLabel="Loading access…"
         error={state.status === "error" ? state.message : null}
         errorHeading="We couldn&apos;t load access"
+        // h3, not the default h2: PeopleSectionHeading above already renders
+        // an h2 ("Access matrix") for this tab, so the error heading needs to
+        // nest under it rather than become a sibling.
+        errorHeadingLevel="h3"
         // The two empty cases (nobody at all vs. nobody matching the filter)
         // are handled below, inside the scroll region, so the filter input
         // stays on screen and a filter that matches nothing can be cleared.
