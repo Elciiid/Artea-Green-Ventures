@@ -19,7 +19,7 @@ import StatusChip from "@/components/StatusChip";
 import TopoPlate from "@/components/TopoPlate";
 import { getDocumentDownloadUrl } from "@/lib/supabase/documents";
 import { formatDate } from "@/lib/format";
-import { useSession } from "@/lib/session";
+import { showDevTools, useSession } from "@/lib/session";
 import {
   PIPELINE,
   stageIndex,
@@ -382,7 +382,7 @@ export default function ApplicationDetail({
       {/* ——— colophon ——— */}
       <footer className="mt-2 border-t-2 border-bone/80 pt-5">
         <p className="font-mono text-xs text-ash">
-          {app.id} · Artea Green Ventures · Demo record, not an official document
+          {app.id} · Artea Green Ventures{showDevTools() && " · Demo record, not an official document"}
         </p>
       </footer>
 
