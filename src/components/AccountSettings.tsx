@@ -13,7 +13,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { isInvalidCredentialsError, isSeedAccount, showDevTools, useSession, type Account } from "@/lib/session";
+import {
+  isInvalidCredentialsError,
+  isMfaVerificationFailedError,
+  isSeedAccount,
+  showDevTools,
+  useSession,
+  type Account,
+} from "@/lib/session";
 import { formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -267,7 +274,12 @@ function MfaSection({ account }: { account: Account }) {
         code: code.trim(),
       });
       if (verifyError) {
-        setError("That code didn't match. Check your authenticator app and try again.");
+        if (isMfaVerificationFailedError(verifyError)) {
+          setError("That code didn't match. Check your authenticator app and try again.");
+        } else {
+          console.error("MFA verification failed:", verifyError);
+          setError("Something went wrong verifying that code. Try again in a moment.");
+        }
         setBusy(false);
         return;
       }

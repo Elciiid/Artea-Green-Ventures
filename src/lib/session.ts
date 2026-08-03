@@ -97,6 +97,21 @@ export function isInvalidCredentialsError(error: unknown): boolean {
   );
 }
 
+/**
+ * True when a Supabase Auth MFA error genuinely means "the code you entered
+ * doesn't match" — as opposed to an expired/already-used challenge, an IP
+ * mismatch, rate limiting, or a config/network failure that would otherwise
+ * look identical to a caller that only checks `if (error)`.
+ */
+export function isMfaVerificationFailedError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "mfa_verification_failed"
+  );
+}
+
 type ProfileRow = {
   id: string;
   name: string;
