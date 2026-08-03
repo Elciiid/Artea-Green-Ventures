@@ -168,6 +168,6 @@ Generously rounded throughout — `rounded-2xl` (18px) is the standard card/row 
 
 ### Don't:
 - **Don't** introduce a second saturated accent color or a dedicated "red" for destructive actions — this system deliberately reuses Trail Amber at different opacities instead.
-- **Don't** add a dark mode or any user-facing theme toggle — this is one fixed light identity by explicit prior decision (Phase 18 removed the previous toggle).
+- **Don't** add a dark mode or any user-facing theme toggle — this is one fixed light identity by explicit prior decision (Phase 19 removed the previous toggle).
 - **Don't** apply `.glass` over flat page background — it only belongs over the gradient wash or imagery.
 - **Don't** reach for bounce/elastic easing or gradient-heavy decoration to manufacture warmth — the palette and glass panels already carry the warmth; motion should stay purposeful and restrained (respecting `prefers-reduced-motion` everywhere, as the codebase already does).
