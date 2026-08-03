@@ -171,6 +171,8 @@ export default function SignUpPage() {
                     setError(null);
                   }}
                   placeholder="Your name"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "signup-error" : undefined}
                   className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
@@ -188,6 +190,8 @@ export default function SignUpPage() {
                     setError(null);
                   }}
                   placeholder="you@arteagreenventures.com"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "signup-error" : undefined}
                   className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
@@ -205,6 +209,8 @@ export default function SignUpPage() {
                     setError(null);
                   }}
                   placeholder="At least 8 characters"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "signup-error" : undefined}
                   className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
@@ -221,12 +227,14 @@ export default function SignUpPage() {
                     setConfirm(e.target.value);
                     setError(null);
                   }}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "signup-error" : undefined}
                   className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
 
               {error && (
-                <p role="alert" className="text-xs leading-relaxed text-amber">
+                <p id="signup-error" role="alert" className="text-xs leading-relaxed text-amber">
                   {error}
                 </p>
               )}

@@ -132,6 +132,7 @@ function PasswordSection({ email }: { email: string }) {
           onChange={setCurrent}
           autoComplete="current-password"
           onEdit={() => setError(null)}
+          errorId={error ? "pw-section-error" : undefined}
         />
         <Field
           id="new-password"
@@ -141,6 +142,7 @@ function PasswordSection({ email }: { email: string }) {
           autoComplete="new-password"
           hint="At least 8 characters."
           onEdit={() => setError(null)}
+          errorId={error ? "pw-section-error" : undefined}
         />
         <Field
           id="confirm-password"
@@ -149,10 +151,11 @@ function PasswordSection({ email }: { email: string }) {
           onChange={setConfirm}
           autoComplete="new-password"
           onEdit={() => setError(null)}
+          errorId={error ? "pw-section-error" : undefined}
         />
 
         {error && (
-          <p role="alert" className="text-xs leading-relaxed text-amber">
+          <p id="pw-section-error" role="alert" className="text-xs leading-relaxed text-amber">
             {error}
           </p>
         )}
@@ -401,13 +404,15 @@ function MfaSection({ account }: { account: Account }) {
                       setError(null);
                     }}
                     placeholder="000000"
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "mfa-code-error" : undefined}
                     className="mt-1.5 w-40 border-ash/20 bg-void/70 font-mono tracking-[0.3em]"
                   />
                 </div>
               </div>
 
               {error && (
-                <p role="alert" className="mt-3 text-xs leading-relaxed text-amber">
+                <p id="mfa-code-error" role="alert" className="mt-3 text-xs leading-relaxed text-amber">
                   {error}
                 </p>
               )}
@@ -467,6 +472,7 @@ function Field({
   autoComplete,
   hint,
   onEdit,
+  errorId,
 }: {
   id: string;
   label: string;
@@ -475,6 +481,7 @@ function Field({
   autoComplete: string;
   hint?: string;
   onEdit?: () => void;
+  errorId?: string;
 }) {
   return (
     <div>
@@ -493,6 +500,8 @@ function Field({
           onChange(e.target.value);
           onEdit?.();
         }}
+        aria-invalid={Boolean(errorId)}
+        aria-describedby={errorId}
         className="mt-1.5 border-ash/20 bg-void/70 font-mono"
       />
       {hint && <p className="mt-1 text-label text-ash">{hint}</p>}
