@@ -57,9 +57,17 @@ export default function RoleChangeDialog({
     setBusy(true);
     try {
       await onConfirm(pendingRole);
+      // On success, PersonDirectory calls setEditing(null), which unmounts
+      // this dialog. On the next real open, the pre-select effect above
+      // reseeds pendingRole fresh from the person's current role anyway — so
+      // resetting it here was always redundant on success. On a *failed*
+      // confirm, PersonDirectory deliberately leaves the dialog open (so the
+      // user can retry); resetting pendingRole here would recreate the
+      // "dialog sits blank" bug this component exists to avoid, since
+      // neither `open` nor `person` changes to re-trigger the pre-select
+      // effect. So: don't reset it here at all.
     } finally {
       setBusy(false);
-      setPendingRole(null);
     }
   }
 

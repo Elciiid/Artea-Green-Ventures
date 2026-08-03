@@ -138,9 +138,9 @@ export default function AccessMatrix() {
         </div>
       ) : state.status === "error" ? (
         <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
-          <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
+          <h3 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
             We couldn&apos;t load access
-          </h2>
+          </h3>
           <p className="mt-2 text-sm text-ash">{state.message}</p>
         </div>
       ) : (

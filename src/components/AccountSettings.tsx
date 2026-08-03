@@ -55,23 +55,37 @@ export default function AccountSettings() {
 // Password change
 // ——————————————————————————————————————————————————————————————
 
+// Which password field(s) a given PasswordSection error implicates, so
+// aria-invalid can land only on the field(s) actually at fault (aria-describedby
+// still points every field at the shared error text — see Field below).
+type InvalidFields = { current: boolean; next: boolean; confirm: boolean };
+const NO_INVALID_FIELDS: InvalidFields = { current: false, next: false, confirm: false };
+
 function PasswordSection({ email }: { email: string }) {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalidFields, setInvalidFields] = useState<InvalidFields>(NO_INVALID_FIELDS);
+
+  function clearError() {
+    setError(null);
+    setInvalidFields(NO_INVALID_FIELDS);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
+    clearError();
 
     if (next.length < 8) {
       setError("Choose a new password of at least 8 characters.");
+      setInvalidFields({ current: false, next: true, confirm: false });
       return;
     }
     if (next !== confirm) {
       setError("The new passwords don't match.");
+      setInvalidFields({ current: false, next: true, confirm: true });
       return;
     }
     if (next === current) {
@@ -91,6 +105,7 @@ function PasswordSection({ email }: { email: string }) {
       });
       if (reauthError) {
         setError("Your current password is incorrect.");
+        setInvalidFields({ current: true, next: false, confirm: false });
         setBusy(false);
         return;
       }
@@ -131,8 +146,9 @@ function PasswordSection({ email }: { email: string }) {
           value={current}
           onChange={setCurrent}
           autoComplete="current-password"
-          onEdit={() => setError(null)}
+          onEdit={clearError}
           errorId={error ? "pw-section-error" : undefined}
+          invalid={invalidFields.current}
         />
         <Field
           id="new-password"
@@ -141,8 +157,9 @@ function PasswordSection({ email }: { email: string }) {
           onChange={setNext}
           autoComplete="new-password"
           hint="At least 8 characters."
-          onEdit={() => setError(null)}
+          onEdit={clearError}
           errorId={error ? "pw-section-error" : undefined}
+          invalid={invalidFields.next}
         />
         <Field
           id="confirm-password"
@@ -150,8 +167,9 @@ function PasswordSection({ email }: { email: string }) {
           value={confirm}
           onChange={setConfirm}
           autoComplete="new-password"
-          onEdit={() => setError(null)}
+          onEdit={clearError}
           errorId={error ? "pw-section-error" : undefined}
+          invalid={invalidFields.confirm}
         />
 
         {error && (
@@ -162,7 +180,7 @@ function PasswordSection({ email }: { email: string }) {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-signal px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+          className="rounded-md bg-signal px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 active:translate-y-px disabled:opacity-60"
         >
           {busy ? "Updating…" : "Update password"}
         </button>
@@ -421,7 +439,7 @@ function MfaSection({ account }: { account: Account }) {
                 <button
                   type="submit"
                   disabled={busy || code.length !== 6}
-                  className="rounded-md bg-signal px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
+                  className="rounded-md bg-signal px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 active:translate-y-px disabled:opacity-50"
                 >
                   {busy ? "Verifying…" : "Verify & turn on"}
                 </button>
@@ -473,6 +491,7 @@ function Field({
   hint,
   onEdit,
   errorId,
+  invalid = false,
 }: {
   id: string;
   label: string;
@@ -482,6 +501,7 @@ function Field({
   hint?: string;
   onEdit?: () => void;
   errorId?: string;
+  invalid?: boolean;
 }) {
   return (
     <div>
@@ -500,7 +520,7 @@ function Field({
           onChange(e.target.value);
           onEdit?.();
         }}
-        aria-invalid={Boolean(errorId)}
+        aria-invalid={invalid}
         aria-describedby={errorId}
         className="mt-1.5 border-ash/20 bg-void/70 font-mono"
       />
