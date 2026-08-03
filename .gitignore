@@ -27,3 +27,18 @@
 HANDOFF.md
 docs/superpowers/
 .claude/skills/verify/
+
+# Impeccable design skill — most of .impeccable/ is local session/working
+# state (critique run snapshots, live-mode server/session/cache state, the
+# per-developer hook cache and config override), not something a team should
+# diff or review. `.impeccable/design.json` is the exception: it's the
+# machine-readable sidecar to the committed root `DESIGN.md` (tonal ramps,
+# component HTML/CSS snippets) and is meant to travel with it in git, per
+# the skill's own convention.
+.impeccable/critique/*
+!.impeccable/critique/ignore.md
+.impeccable/live/
+.impeccable/history/
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json

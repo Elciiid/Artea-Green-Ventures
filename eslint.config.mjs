@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import jsxA11y from "eslint-plugin-jsx-a11y";
+import reactHooks from "eslint-plugin-react-hooks";
 
 // Accessibility linting is the point of this config: jsx-a11y runs on every
 // component so a11y violations surface during development instead of being
@@ -23,6 +24,10 @@ export default tseslint.config(
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
+  },
+  {
+    files: ["**/*.{js,mjs,jsx,ts,tsx}"],
+    ...reactHooks.configs["recommended-latest"],
   },
   {
     files: ["**/*.{jsx,tsx}"],

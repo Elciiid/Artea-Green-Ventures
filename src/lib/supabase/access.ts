@@ -5,6 +5,7 @@
 // after a revoke inserts a new row rather than reviving the old one.
 
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { assertRowReturned } from "@/lib/supabase/assert-write";
 import type { Role } from "@/lib/session";
 
 export type GrantableProfile = {
@@ -76,9 +77,11 @@ export async function grantAccess(applicationId: string, profileId: string): Pro
 /** Revoke a live grant by its own id — sets revoked_at, never deletes the row. */
 export async function revokeAccess(grantId: string): Promise<void> {
   const supabase = getSupabaseClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("agv_application_access")
     .update({ revoked_at: new Date().toISOString() })
-    .eq("id", grantId);
+    .eq("id", grantId)
+    .select("id");
   if (error) throw error;
+  assertRowReturned(data, "Couldn't revoke access — you may not have permission.");
 }

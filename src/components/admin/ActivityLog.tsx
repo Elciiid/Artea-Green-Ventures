@@ -10,11 +10,13 @@
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/format";
 import { fetchAllProfiles, type ProfileForRoleAssignment } from "@/lib/supabase/roles";
-import { fetchAuditLog, type AuditLogEntry } from "@/lib/supabase/auditLog";
-import { fetchLoginActivity, type LoginActivityEntry } from "@/lib/supabase/loginActivity";
+import { fetchAuditLog } from "@/lib/supabase/auditLog";
+import { fetchLoginActivity } from "@/lib/supabase/loginActivity";
+import { useAsyncResource } from "@/lib/useAsyncResource";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 import SimplePagination from "@/components/admin/SimplePagination";
+import SurfaceState from "@/components/SurfaceState";
 
 const PAGE_SIZE = 5;
 
@@ -25,33 +27,42 @@ function formatTimestamp(iso: string): string {
   return `${formatDate(iso.slice(0, 10))} · ${time}`;
 }
 
-type LoadState<T> =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; data: T };
-
 export default function ActivityLog() {
   const [tab, setTab] = useState<Tab>("logins");
-  const [logins, setLogins] = useState<LoadState<LoginActivityEntry[]>>({ status: "loading" });
-  const [activity, setActivity] = useState<LoadState<AuditLogEntry[]>>({ status: "loading" });
-  const [profiles, setProfiles] = useState<ProfileForRoleAssignment[]>([]);
+  // The two tabs are independent resources, not two views of one fetch —
+  // either can fail on its own, and each keeps its own state accordingly.
+  const { state: logins } = useAsyncResource(
+    fetchLoginActivity,
+    [],
+    "Couldn't load sign-in activity."
+  );
+  const { state: activity } = useAsyncResource(fetchAuditLog, [], "Couldn't load activity.");
   const [loginsPage, setLoginsPage] = useState(1);
   const [activityPage, setActivityPage] = useState(1);
 
+  // Profiles are auxiliary: they only resolve an audit entry's actor UUID to a
+  // display name. A failure here isn't fatal to the tab, so it stays plain
+  // local state rather than going through useAsyncResource/SurfaceState — but
+  // it must not be silent either. Without the notice below, a failed fetch is
+  // indistinguishable from "these actors genuinely have no profile row", since
+  // both fall through actorName()'s raw-UUID fallback.
+  const [profiles, setProfiles] = useState<ProfileForRoleAssignment[]>([]);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
+
   useEffect(() => {
-    fetchLoginActivity()
-      .then((data) => setLogins({ status: "ready", data }))
-      .catch((e) =>
-        setLogins({ status: "error", message: e instanceof Error ? e.message : "Couldn't load sign-in activity." })
-      );
-    fetchAuditLog()
-      .then((data) => setActivity({ status: "ready", data }))
-      .catch((e) =>
-        setActivity({ status: "error", message: e instanceof Error ? e.message : "Couldn't load activity." })
-      );
+    let cancelled = false;
     fetchAllProfiles()
-      .then(setProfiles)
-      .catch(() => setProfiles([]));
+      .then((data) => {
+        if (!cancelled) setProfiles(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setProfiles([]);
+        setProfilesError("Couldn't load names — showing raw IDs.");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function actorName(actor: string | null): string {
@@ -99,11 +110,14 @@ export default function ActivityLog() {
 
         <TabsContent value="logins" className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {logins.status === "loading" ? (
-              <p role="status" className="mt-5 text-sm text-ash">Loading…</p>
-            ) : logins.status === "error" ? (
-              <p className="mt-5 text-sm text-amber">{logins.message}</p>
-            ) : (
+            <SurfaceState
+              loading={logins.status === "loading"}
+              loadingLabel="Loading…"
+              error={logins.status === "error" ? logins.message : null}
+              empty={logins.status === "ready" && loginsData.length === 0}
+              emptyContent={<p className="text-sm text-ash">No accounts yet.</p>}
+              className="mt-5"
+            >
               <ul className="mt-5 divide-y divide-ash/15">
                 {pagedLogins.map((entry) => (
                   <li key={entry.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
@@ -114,9 +128,8 @@ export default function ActivityLog() {
                     </span>
                   </li>
                 ))}
-                {loginsData.length === 0 && <li className="py-2.5 text-sm text-ash">No accounts yet.</li>}
               </ul>
-            )}
+            </SurfaceState>
           </div>
           {logins.status === "ready" && (
             <div className="mt-3 shrink-0">
@@ -132,31 +145,40 @@ export default function ActivityLog() {
 
         <TabsContent value="activity" className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {activity.status === "loading" ? (
-              <p role="status" className="mt-5 text-sm text-ash">Loading…</p>
-            ) : activity.status === "error" ? (
-              <p className="mt-5 text-sm text-amber">{activity.message}</p>
-            ) : (
-              <ul className="mt-5 divide-y divide-ash/15">
-                {pagedActivity.map((entry) => (
-                  <li key={entry.id} className="py-2.5 text-sm">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <span className="font-medium text-bone">
-                        {actorName(entry.actor)} · {entry.action.toLowerCase()} on {entry.table_name}
-                      </span>
-                      <span className="text-xs text-ash">{formatTimestamp(entry.at)}</span>
-                    </div>
-                    <details className="mt-1">
-                      <summary className="cursor-pointer text-xs text-ash hover:text-bone">Details</summary>
-                      <pre className="mt-1.5 overflow-x-auto rounded-lg bg-void/40 p-3 text-xs text-ash">
-                        {JSON.stringify(entry.changes, null, 2)}
-                      </pre>
-                    </details>
-                  </li>
-                ))}
-                {activityData.length === 0 && <li className="py-2.5 text-sm text-ash">No activity yet.</li>}
-              </ul>
-            )}
+            <SurfaceState
+              loading={activity.status === "loading"}
+              loadingLabel="Loading…"
+              error={activity.status === "error" ? activity.message : null}
+              empty={activity.status === "ready" && activityData.length === 0}
+              emptyContent={<p className="text-sm text-ash">No activity yet.</p>}
+              className="mt-5"
+            >
+              <>
+                {profilesError && (
+                  <p role="alert" className="mt-5 text-sm text-amber">
+                    {profilesError}
+                  </p>
+                )}
+                <ul className="mt-5 divide-y divide-ash/15">
+                  {pagedActivity.map((entry) => (
+                    <li key={entry.id} className="py-2.5 text-sm">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <span className="font-medium text-bone">
+                          {actorName(entry.actor)} · {entry.action.toLowerCase()} on {entry.table_name}
+                        </span>
+                        <span className="text-xs text-ash">{formatTimestamp(entry.at)}</span>
+                      </div>
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs text-ash hover:text-bone">Details</summary>
+                        <pre className="mt-1.5 overflow-x-auto rounded-lg bg-void/40 p-3 text-xs text-ash">
+                          {JSON.stringify(entry.changes, null, 2)}
+                        </pre>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            </SurfaceState>
           </div>
           {activity.status === "ready" && (
             <div className="mt-3 shrink-0">

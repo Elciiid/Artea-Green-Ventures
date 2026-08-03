@@ -9,7 +9,7 @@
 // no header row of per-application columns left to pin — and was removed
 // along with the Table it belonged to.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   fetchApplicationsForAccess,
@@ -21,60 +21,52 @@ import {
   type GrantableProfile,
   type LiveGrant,
 } from "@/lib/supabase/access";
+import { useAsyncResource } from "@/lib/useAsyncResource";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 import SimplePagination from "@/components/admin/SimplePagination";
+import SurfaceState from "@/components/SurfaceState";
 
 const PAGE_SIZE = 5;
 
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | {
-      status: "ready";
-      applications: AccessApplication[];
-      profiles: GrantableProfile[];
-      grants: LiveGrant[];
-    };
+function loadAccess(): Promise<{
+  applications: AccessApplication[];
+  profiles: GrantableProfile[];
+  grants: LiveGrant[];
+}> {
+  return Promise.all([
+    fetchApplicationsForAccess(),
+    fetchGrantableProfiles(),
+    fetchLiveGrants(),
+  ]).then(([applications, profiles, grants]) => ({ applications, profiles, grants }));
+}
 
 function grantKey(applicationId: string, profileId: string): string {
   return `${applicationId}:${profileId}`;
 }
 
 export default function AccessMatrix() {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const { state } = useAsyncResource(loadAccess, [], "Something went wrong loading access.");
+  // Toggling a checkbox re-reads only the live grants — a narrower operation
+  // than the initial load, so it keeps its own state rather than reloading the
+  // whole surface (which would flash the spinner over every row).
+  const [toggledGrants, setToggledGrants] = useState<LiveGrant[] | null>(null);
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ status: "loading" });
-    Promise.all([fetchApplicationsForAccess(), fetchGrantableProfiles(), fetchLiveGrants()])
-      .then(([applications, profiles, grants]) => {
-        if (cancelled) return;
-        setState({ status: "ready", applications, profiles, grants });
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setState({
-          status: "error",
-          message: e instanceof Error ? e.message : "Something went wrong loading access.",
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const applications = state.status === "ready" ? state.data.applications : [];
+  const allProfiles = state.status === "ready" ? state.data.profiles : [];
+  const grants = toggledGrants ?? (state.status === "ready" ? state.data.grants : []);
 
   async function handleToggle(app: AccessApplication, profile: GrantableProfile) {
     if (state.status !== "ready") return;
     const key = grantKey(app.id, profile.id);
     if (pending.has(key)) return;
 
-    const existing = state.grants.find(
+    const existing = grants.find(
       (g) => g.application_id === app.id && g.profile_id === profile.id
     );
 
@@ -85,8 +77,7 @@ export default function AccessMatrix() {
       } else {
         await grantAccess(app.id, profile.id);
       }
-      const grants = await fetchLiveGrants();
-      setState((s) => (s.status === "ready" ? { ...s, grants } : s));
+      setToggledGrants(await fetchLiveGrants());
     } catch (e) {
       toast.error(
         e instanceof Error ? `Couldn't update access: ${e.message}` : "Couldn't update access."
@@ -100,14 +91,11 @@ export default function AccessMatrix() {
     }
   }
 
-  const filteredProfiles =
-    state.status === "ready"
-      ? state.profiles.filter((p) => {
-          const q = filter.trim().toLowerCase();
-          if (!q) return true;
-          return p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q);
-        })
-      : [];
+  const filteredProfiles = allProfiles.filter((p) => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q);
+  });
   const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pagedProfiles = filteredProfiles.slice(
@@ -129,21 +117,22 @@ export default function AccessMatrix() {
         />
       </div>
 
-      {state.status === "loading" ? (
-        <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
-          <p role="status" aria-live="polite" className="flex items-center justify-center gap-3 text-sm text-ash">
-            <span aria-hidden className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ash/25 border-t-signal" />
-            Loading access…
-          </p>
-        </div>
-      ) : state.status === "error" ? (
-        <div className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl">
-          <h2 className="text-label font-semibold uppercase tracking-[0.16em] text-ash">
-            We couldn&apos;t load access
-          </h2>
-          <p className="mt-2 text-sm text-ash">{state.message}</p>
-        </div>
-      ) : (
+      <SurfaceState
+        loading={state.status === "loading"}
+        loadingLabel="Loading access…"
+        error={state.status === "error" ? state.message : null}
+        errorHeading="We couldn&apos;t load access"
+        // h3, not the default h2: PeopleSectionHeading above already renders
+        // an h2 ("Access matrix") for this tab, so the error heading needs to
+        // nest under it rather than become a sibling.
+        errorHeadingLevel="h3"
+        // The two empty cases (nobody at all vs. nobody matching the filter)
+        // are handled below, inside the scroll region, so the filter input
+        // stays on screen and a filter that matches nothing can be cleared.
+        empty={false}
+        emptyContent={null}
+        className="glass mt-9 rounded-2xl py-16 text-center backdrop-blur-xl"
+      >
         <>
           <div className="mt-9 shrink-0">
             <Input
@@ -157,14 +146,27 @@ export default function AccessMatrix() {
           </div>
 
           <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
-            {pagedProfiles.length === 0 ? (
-              <div className="glass rounded-2xl py-8 text-center text-sm text-ash backdrop-blur-xl">
-                No one matches &quot;{filter}&quot;.
-              </div>
-            ) : (
+            <SurfaceState
+              loading={false}
+              loadingLabel=""
+              error={null}
+              empty={pagedProfiles.length === 0}
+              // Two distinct conditions that used to be conflated: an empty
+              // *unfiltered* list rendered the filter message with an empty
+              // filter in it — literally `No one matches "".` on a fresh
+              // deployment, which reads as nonsense.
+              emptyContent={
+                allProfiles.length === 0 ? (
+                  <>No one to grant access to yet.</>
+                ) : (
+                  <>No one matches &quot;{filter}&quot;.</>
+                )
+              }
+              className="glass rounded-2xl py-8 text-center text-sm text-ash backdrop-blur-xl"
+            >
               <ul className="flex flex-col gap-2">
                 {pagedProfiles.map((profile) => {
-                  const count = state.grants.filter((g) => g.profile_id === profile.id).length;
+                  const count = grants.filter((g) => g.profile_id === profile.id).length;
                   const isOpen = expandedId === profile.id;
                   return (
                     <li key={profile.id} className="glass rounded-2xl backdrop-blur-xl">
@@ -175,7 +177,7 @@ export default function AccessMatrix() {
                         <CollapsibleTrigger asChild>
                           <button
                             type="button"
-                            aria-label={`${profile.name}, ${profile.role}, ${count} of ${state.applications.length} applications`}
+                            aria-label={`${profile.name}, ${profile.role}, ${count} of ${applications.length} applications`}
                             className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
                           >
                             <span className="flex min-w-0 items-center gap-3">
@@ -193,7 +195,7 @@ export default function AccessMatrix() {
                             </span>
                             <span className="flex shrink-0 items-center gap-3">
                               <span aria-live="polite" className="text-label uppercase tracking-[0.1em] text-ash">
-                                {count} of {state.applications.length} apps
+                                {count} of {applications.length} apps
                               </span>
                               <svg
                                 aria-hidden
@@ -214,9 +216,9 @@ export default function AccessMatrix() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <ul className="flex flex-col gap-1 border-t border-ash/15 px-4 py-3">
-                            {state.applications.map((app) => {
+                            {applications.map((app) => {
                               const key = grantKey(app.id, profile.id);
-                              const checked = state.grants.some(
+                              const checked = grants.some(
                                 (g) => g.application_id === app.id && g.profile_id === profile.id
                               );
                               const busy = pending.has(key);
@@ -262,7 +264,7 @@ export default function AccessMatrix() {
                   );
                 })}
               </ul>
-            )}
+            </SurfaceState>
           </div>
 
           <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -277,7 +279,7 @@ export default function AccessMatrix() {
             />
           </div>
         </>
-      )}
+      </SurfaceState>
     </div>
   );
 }
