@@ -15,6 +15,12 @@ export default tseslint.config(
       "node_modules/**",
       "next-env.d.ts",
       "eslint.config.mjs",
+      // Sibling git worktrees (this project's own convention for isolated
+      // branch work, see .gitignore) live physically inside this same
+      // directory tree, each with its own node_modules — without this,
+      // running from a checkout that still has worktrees on disk lints
+      // every one of their dependency trees too.
+      ".worktrees/**",
     ],
   },
   js.configs.recommended,
