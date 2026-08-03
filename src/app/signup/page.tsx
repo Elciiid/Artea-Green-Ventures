@@ -142,7 +142,7 @@ export default function SignUpPage() {
           </p>
 
           {pendingConfirmation ? (
-            <div className="mt-6 rounded-xl border border-ash/20 bg-white/40 px-4 py-4 text-sm text-bone">
+            <div className="mt-6 rounded-xl border border-ash/20 bg-pine/40 px-4 py-4 text-sm text-bone">
               <p className="font-semibold">Check your email to confirm your account.</p>
               <p className="mt-1.5 text-ash">
                 We sent a confirmation link to <span className="text-bone">{email}</span>.
@@ -171,7 +171,7 @@ export default function SignUpPage() {
                     setError(null);
                   }}
                   placeholder="Your name"
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-white/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
               <div>
@@ -188,7 +188,7 @@ export default function SignUpPage() {
                     setError(null);
                   }}
                   placeholder="you@arteagreenventures.com"
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-white/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
               <div>
@@ -205,7 +205,7 @@ export default function SignUpPage() {
                     setError(null);
                   }}
                   placeholder="At least 8 characters"
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-white/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
               <div>
@@ -221,7 +221,7 @@ export default function SignUpPage() {
                     setConfirm(e.target.value);
                     setError(null);
                   }}
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-white/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
                 />
               </div>
 
@@ -234,7 +234,7 @@ export default function SignUpPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-full bg-signal py-3 text-sm font-semibold text-void transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+                className="w-full rounded-full bg-signal py-3 text-sm font-semibold text-void transition hover:brightness-110 active:translate-y-px disabled:opacity-60"
               >
                 {busy ? "Creating account…" : "Create account"}
               </button>
@@ -253,7 +253,7 @@ export default function SignUpPage() {
                 type="button"
                 onClick={onMicrosoft}
                 disabled={oauthBusy}
-                className="mt-5 flex w-full items-center justify-center gap-2.5 rounded-full border border-ash/20 bg-white/50 py-3 text-sm font-semibold text-bone transition hover:bg-white/70 active:scale-[0.99] disabled:opacity-60"
+                className="mt-5 flex w-full items-center justify-center gap-2.5 rounded-full border border-ash/20 bg-pine/50 py-3 text-sm font-semibold text-bone transition hover:bg-pine/70 active:translate-y-px disabled:opacity-60"
               >
                 <MicrosoftIcon />
                 {oauthBusy ? "Redirecting…" : "Continue with Microsoft"}
