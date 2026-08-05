@@ -17,7 +17,7 @@
 // The agv_profiles row for each user is created automatically by the
 // agv_handle_new_user trigger, but the trigger no longer reads role from
 // metadata (role is client-suppliable via the public anon key and can't be
-// trusted for access control — see 20260805120000_fix_signup_role_injection).
+// trusted for access control — see 20260805190000_fix_signup_role_injection).
 // Every account below gets an explicit service-role UPDATE of its role right
 // after creation, same as the update branch already did.
 

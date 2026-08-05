@@ -53,7 +53,7 @@ server-side writes — the same pattern already used elsewhere in this codebase
 for role changes (`src/app/api/admin/set-role/route.ts`: verify caller
 identity via the anon client, write via `getSupabaseServiceClient()`).
 
-### 1. Migration: `supabase/migrations/20260805120000_fix_signup_role_injection.sql`
+### 1. Migration: `supabase/migrations/20260805190000_fix_signup_role_injection.sql`
 
 Replaces `agv_handle_new_user()` so it **never reads `role` from
 `raw_user_meta_data`** — every new profile is inserted with the hardcoded
@@ -241,12 +241,135 @@ behind in the shared dev project.
   supporting AVIF image optimization for a logo asset (`Logo.tsx`) — not
   introduced by this change.
 
+## Round 2: independent review findings and fixes
+
+An independent review of the round-1 fix came back GO overall — the core fix
+genuinely closes the hole, race conditions only ever downgrade (never
+escalate), and the OAuth path's correctness was confirmed by direct code
+reading, not just trusted. It found three Important issues and two cheap
+Minor ones, all fixed here:
+
+**1. [Important] Staff branch's UPDATE had no existing-user guard.**
+`signUp()` against an email that's already registered doesn't error: with
+"Confirm email" on, GoTrue returns an obfuscated user (random id,
+`identities: []`) for an already-*confirmed* email (enumeration protection),
+but the REAL existing user's id — still with `identities: []` — for an
+already-registered-but-*unconfirmed* one. The unconditional
+`update({ role: "staff" }).eq("id", data.user.id)` added in round 1 would,
+in that second case, silently reset an existing (if unconfirmed) account's
+role to `staff`, overwriting whatever an admin had already set — a
+route-level write surface that didn't exist pre-fix (the trigger's
+`on conflict do nothing` protected existing rows before this fix added any
+route-level UPDATE at all).
+
+Fix: `src/app/api/auth/signup/route.ts`'s staff branch now only performs the
+UPDATE when `(data.user.identities?.length ?? 0) > 0` — the signal GoTrue
+uses to distinguish "just created a brand-new auth.users row" from "returned
+an existing user." The client branch needed no equivalent guard:
+`admin.createUser()` errors outright on a duplicate email rather than
+ambiguously merging, so `createdId` there is always a genuinely new user
+(documented inline in the code).
+
+**2. [Important] Migration version collision.** The round-1 migration
+filename, `20260805120000_fix_signup_role_injection.sql`, shared its
+`20260805120000` version prefix with
+`20260805120000_fix_manager_grant_rls_recursion.sql` on the sibling
+`companies-access-model` branch — Supabase's `schema_migrations` tracking
+keys on that version string, so both branches landing on `main` would
+duplicate-key or silently apply only one. Checked every `20260805*`
+migration across both branches' directories (highest in use was
+`20260805170000` on `companies-access-model`); renamed this migration to
+`20260805190000_fix_signup_role_injection.sql`, clearly past that. This was
+a pure `git mv` — file content is byte-identical to what's already applied
+live (confirmed via `git diff`, shown as a 100%-similarity rename with no
+content hunk), so no re-application was needed; only in-repo references to
+the old filename (a comment in `seed-users.mjs`, this report) were updated.
+
+**3. [Important] Both new UPDATEs discarded their result.** Neither the
+staff nor client branch's role-assignment UPDATE checked for an error or a
+zero-rows result — a silently failed write would leave a staff signup
+quietly stuck at `client` while still returning a 200 and a valid session,
+same failure this fix's own model (`set-role/route.ts`) explicitly guards
+against. Both UPDATEs now use `.select("id")` and check
+`error || !updated || updated.length === 0`, logging via `console.error` on
+failure (with the offending user id and reason) rather than discarding it
+silently. Chose to log-and-continue rather than fail the signup outright:
+`agv_handle_new_user()`'s own default is already `'client'`
+(least-privileged), so a failed role-write leaves the new account
+under-privileged, never over — never a security regression, only a
+functional one an admin can correct via `/admin/people/roles`, so it isn't
+worth blocking a user who already has a valid account and session over.
+
+**4. [Minor] Stale metadata fallback in `src/lib/session.ts`.**
+`loadAccount()`'s client-side fallback (used only while the profile row is
+momentarily unreadable, e.g. right after the trigger fires) read
+`role: profile?.role ?? ((meta.role as Role) ?? "staff")` — reading role from
+the same untrustworthy `user_metadata` this whole fix treats as
+attacker-controlled, with a stale `"staff"` default from before the
+staff/client rename. Not exploitable for data (RLS gates everything
+server-side regardless of what this renders), but inconsistent with the
+fix's "role never derives from metadata" framing and could render wrong UI
+chrome in an edge case. Removed the metadata-role fallback entirely and
+changed the bare default to `"client"`, matching the trigger's own default —
+the `name` fallback still reads from metadata since that's cosmetic display
+text with no access-control implication, same reasoning applied everywhere
+else in this fix.
+
+**5. [Minor] Stale comment in `src/app/auth/callback/route.ts`.** The
+file-header comment on `agv_handle_new_user()`'s behavior still described
+the pre-fix "defaults role to 'staff' unless metadata says otherwise"
+behavior. Updated to describe the actual current behavior (always defaults
+to `'client'`, never reads metadata for role), with a pointer to the
+`20260805190000` migration.
+
+### Round 2 re-verification
+
+- `npx tsc --noEmit` — clean.
+- `npm run lint` — clean.
+- `npm run build` — succeeded, same pre-existing unrelated AVIF warning as
+  round 1, no new warnings or errors.
+- Re-ran the trigger-level exploit check via `admin.createUser()` with
+  `role: 'admin'` metadata (email `avgsectestround2attack20260806@gmail.com`)
+  against the renamed/updated code — result: `agv_profiles.role = 'client'`,
+  not admin. Fix still holds after the migration rename and route changes.
+- Re-ran the client-domain signup path end-to-end through the live dev
+  server (`avgsectestclientround220260806@gmail.com`) — response
+  `{"role":"client", ...}`, confirmed in `agv_profiles` as `role: "client"`,
+  and confirmed via the dev server log that the new error/row-count check on
+  that branch's UPDATE passed silently (no `[api/auth/signup]` error logged)
+  rather than being untested.
+- Verified the new guard's underlying signal by creating a real unconfirmed
+  user via `admin.createUser({ email_confirm: false })`
+  (`avgsectestunconfirmed20260806@gmail.com`) and inspecting the returned
+  `identities` array shape — confirmed non-empty for a genuinely new user,
+  consistent with the guard's logic. Could not live-trigger the specific
+  "second `signUp()` call against an already-existing-unconfirmed email
+  returns real user + empty identities" scenario without tripping the
+  project's email-send limit again; that behavior is well-documented
+  GoTrue/Supabase behavior and matches the reviewer's own description, which
+  the guard code (`identities?.length > 0`) structurally handles correctly
+  either way.
+- All three round-2 test accounts deleted via service-role key; re-query of
+  `auth.admin.listUsers()` confirmed **0 remaining test users** project-wide.
+- Race-safety reasoning (a race only ever downgrades, never escalates) and
+  the OAuth path's correctness are unaffected by any of these five fixes —
+  no code was touched that changes either, confirmed by re-reading the
+  diffs.
+
 ## Files changed
 
-- `supabase/migrations/20260805120000_fix_signup_role_injection.sql` (new) —
-  the trigger fix, applied to the live project by the user during this
-  session.
+- `supabase/migrations/20260805190000_fix_signup_role_injection.sql` (new,
+  renamed from `20260805120000_...` in round 2 to resolve a version
+  collision with a sibling branch — content byte-identical) — the trigger
+  fix, applied to the live project by the user during round 1.
 - `src/app/api/auth/signup/route.ts` — explicit role UPDATE added to both
-  the staff and client branches.
+  the staff and client branches (round 1); staff branch gated on an
+  existing-user guard, both branches' UPDATEs now check for errors/zero-rows
+  and log on failure (round 2).
 - `supabase/seed-users.mjs` — explicit role UPDATE added to the
-  create-new-account branch.
+  create-new-account branch (round 1); comment updated to the renamed
+  migration filename (round 2).
+- `src/lib/session.ts` — removed the untrustworthy metadata-role fallback,
+  default changed to `"client"` (round 2).
+- `src/app/auth/callback/route.ts` — stale comment describing the old
+  trigger default corrected (round 2).

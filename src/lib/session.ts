@@ -150,13 +150,22 @@ async function loadAccount(): Promise<Account | null> {
       .single();
     const profile = (data as ProfileRow | null) ?? null;
 
-    // Fall back to auth metadata if the profile row isn't readable yet.
+    // Fall back to auth metadata only for display niceties (name) if the
+    // profile row isn't readable yet. role is deliberately NOT read from
+    // metadata here — raw_user_meta_data is client-suppliable via the
+    // public anon key (see 20260805190000_fix_signup_role_injection) and was
+    // never a trustworthy source for it, even client-side. RLS is what
+    // actually gates access server-side regardless of what this renders, so
+    // this fallback was only ever cosmetic — but rendering it from
+    // attacker-controlled data was still the wrong default to reach for.
+    // While the profile row is momentarily unreadable, default to 'client',
+    // this app's least-privileged role, matching the trigger's own default.
     const meta = user.user_metadata ?? {};
     return {
       id: user.id,
       email: user.email ?? "",
       name: profile?.name ?? (meta.name as string) ?? user.email ?? "",
-      role: profile?.role ?? ((meta.role as Role) ?? "staff"),
+      role: profile?.role ?? "client",
       organizationId: profile?.organization_id ?? "",
     };
   } catch {

@@ -6,11 +6,13 @@
 // cookie context to write into and hands tokens back over JSON instead.
 //
 // Role assignment: agv_handle_new_user() (10a/10b, trigger on auth.users)
-// auto-creates this account's agv_profiles row and defaults its role to
-// 'staff' unless metadata says otherwise. The domain-gated signup route
-// passes role explicitly, but an OAuth provider never sends one — so every
-// brand-new OAuth account would land as 'staff' regardless of email domain
-// unless corrected here. Only done on the account's first-ever sign-in
+// auto-creates this account's agv_profiles row, always defaulting its role
+// to 'client' — it never reads role from metadata at all (client-suppliable
+// via the public anon key, so it can't be trusted for access control; see
+// 20260805190000_fix_signup_role_injection). An OAuth provider never sends a
+// role either way, so every brand-new OAuth account lands as 'client'
+// regardless of email domain unless corrected here. Only done on the
+// account's first-ever sign-in
 // (created_at ≈ last_sign_in_at, within NEW_ACCOUNT_WINDOW_MS) — never on a
 // later login, so this can't silently strip an admin (or any other
 // deliberately-set) role from someone who later chooses to sign in via
