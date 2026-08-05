@@ -80,6 +80,11 @@ export async function POST(request: Request) {
 
     if (isStaff) {
       const supabase = getSupabaseServerClient();
+      // `role: "staff"` in options.data is cosmetic only — agv_handle_new_user()
+      // no longer reads role from user metadata (it's client-suppliable via the
+      // public anon key, so it can never be the source of truth for access
+      // control; see 20260805120000_fix_signup_role_injection). The explicit
+      // service-role UPDATE below is what actually assigns the role.
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -87,6 +92,10 @@ export async function POST(request: Request) {
       });
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      if (data.user) {
+        const adminClient = getSupabaseServiceClient();
+        await adminClient.from("agv_profiles").update({ role: "staff" }).eq("id", data.user.id);
       }
       if (data.session) {
         return NextResponse.json({
@@ -102,7 +111,13 @@ export async function POST(request: Request) {
 
     // Client path — created pre-verified via the Admin API so Supabase never
     // sends (and can never bounce) a confirmation email for an address we
-    // haven't proven ownership of.
+    // haven't proven ownership of. `role: "client"` in user_metadata is
+    // cosmetic only, same reasoning as the staff branch above — this call
+    // already runs under the service_role key, but agv_handle_new_user()
+    // never trusts metadata for role regardless of which key created the
+    // account. It happens to match the trigger's own safe default, so the
+    // explicit UPDATE below is technically redundant right now, but it's kept
+    // so this path doesn't silently depend on that default staying 'client'.
     const adminClient = getSupabaseServiceClient();
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
@@ -114,6 +129,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
     const createdId = created.user?.id;
+    if (createdId) {
+      await adminClient.from("agv_profiles").update({ role: "client" }).eq("id", createdId);
+    }
 
     // createUser() doesn't return a session — sign in immediately so the
     // browser can hydrate its own session, same contract as the staff path.
