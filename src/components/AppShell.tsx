@@ -70,7 +70,7 @@ function recordsNav(role: Role): NavItem[] {
 // all" is a locked decision (see the `role !== "client"` check below).
 const HOME_ITEM: NavItem = {
   href: "/home",
-  label: "Home",
+  label: "Dashboard",
   match: (p) => p === "/home" || p.startsWith("/home/"),
 };
 
