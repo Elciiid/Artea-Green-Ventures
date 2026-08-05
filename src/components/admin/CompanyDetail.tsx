@@ -351,7 +351,7 @@ export default function CompanyDetail({ companyId }: { companyId: string }) {
           <div className="mt-10">
             <PeopleSectionHeading
               label="Application scope"
-              description="Which applications this company's roster can see. A manager can only grant their teammates access within this set."
+              description="Which applications a manager may grant new access to for this company's roster — existing grants aren't affected by unchecking an application here. A manager can only grant their teammates access within this set."
             />
             <div className="mt-4">
               {applications.length === 0 ? (
