@@ -38,6 +38,7 @@
 -- into it (same reasoning as every other manager-facing check in this
 -- task).
 
+drop policy if exists "access — manager read within company" on public.agv_application_access;
 create policy "access — manager read within company"
   on public.agv_application_access
   for select
