@@ -38,7 +38,11 @@ import {
 
 type NavItem = { href: string; label: string; match: (p: string) => boolean };
 
-function recordsNav(role: Role): NavItem[] {
+// Widened to also see isCompanyManager (previously role-only) — the
+// Companies nav task flagged this as a likely future need without building
+// it prematurely; My Team is that need. Meaningless for role === "admin",
+// passed through unconditionally since only the client branch checks it.
+function recordsNav(role: Role, isCompanyManager: boolean): NavItem[] {
   return role === "admin"
     ? [
         {
@@ -63,6 +67,19 @@ function recordsNav(role: Role): NavItem[] {
           label: "Applications",
           match: (p) => p === "/portal" || p.startsWith("/portal/applications"),
         },
+        // Staff never has isCompanyManager set (company assignment is
+        // client-only by construction — see session.ts), so this is
+        // effectively client-only without needing an explicit role check
+        // here too.
+        ...(isCompanyManager
+          ? [
+              {
+                href: "/portal/team",
+                label: "My Team",
+                match: (p: string) => p.startsWith("/portal/team"),
+              },
+            ]
+          : []),
       ];
 }
 
@@ -77,11 +94,20 @@ const HOME_ITEM: NavItem = {
 
 export default function AppShell({
   expect,
+  requireCompanyManager = false,
   centerContent = false,
   boundedContent = false,
   children,
 }: {
   expect?: Role | Role[];
+  /** Narrower than `expect`: gates on account.isCompanyManager in addition
+   * to (not instead of) any role check above. `expect` only takes
+   * `Role`/`Role[]`, and widening it to understand flags would be a larger
+   * refactor than this one flag-gated page warrants — so this is a separate,
+   * additive prop rather than a change to `expect`'s own shape. A regular
+   * client (isCompanyManager: false) hitting a page gated this way is
+   * redirected away exactly like a role mismatch. */
+  requireCompanyManager?: boolean;
   /** Vertically centers the page's content within the shell instead of
    * top-aligning it — appropriate for a landing/orientation surface (Home),
    * not for task pages where it pushes short content below the fold. */
@@ -109,6 +135,9 @@ export default function AppShell({
     () => (expect === undefined ? null : Array.isArray(expect) ? expect : [expect]),
     [expect]
   );
+  const deniedByRole = (acc: NonNullable<typeof account>): boolean =>
+    Boolean(allowedRoles && !allowedRoles.includes(acc.role)) ||
+    (requireCompanyManager && !acc.isCompanyManager);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -116,8 +145,14 @@ export default function AppShell({
       router.replace("/");
       return;
     }
-    if (allowedRoles && !allowedRoles.includes(account.role)) router.replace(roleHome(account.role));
-  }, [hydrated, account, allowedRoles, router]);
+    if (deniedByRole(account)) router.replace(roleHome(account.role));
+    // deniedByRole is a plain function recomputed every render (reads
+    // allowedRoles/requireCompanyManager, both already deps below via their
+    // own stable inputs), not a stable dependency itself — see
+    // allowedRoles's own useMemo above for why the role half of this needs
+    // one at all.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, account, allowedRoles, requireCompanyManager, router]);
 
   // Close both menus whenever the route changes.
   useEffect(() => {
@@ -126,7 +161,7 @@ export default function AppShell({
   }, [pathname]);
 
   // Shown while the persisted session restores or a redirect is pending.
-  if (!hydrated || !account || (allowedRoles && !allowedRoles.includes(account.role))) {
+  if (!hydrated || !account || deniedByRole(account)) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-void px-6">
         <p
@@ -144,7 +179,7 @@ export default function AppShell({
     );
   }
 
-  const nav = [HOME_ITEM, ...recordsNav(account.role)];
+  const nav = [HOME_ITEM, ...recordsNav(account.role, account.isCompanyManager)];
   const menuNav = nav;
 
   return (
