@@ -66,8 +66,9 @@ function recordsNav(role: Role): NavItem[] {
       ];
 }
 
-// Home is only ever shown for admin/staff — "client gets no Home hub at
-// all" is a locked decision (see the `role !== "client"` check below).
+// Shown for every role — the earlier "client gets no Home hub at all"
+// decision (Phase 18) has been deliberately reversed; every role now lands
+// on /home (see roleHome() in src/lib/session.ts) and gets this nav item.
 const HOME_ITEM: NavItem = {
   href: "/home",
   label: "Dashboard",
@@ -143,7 +144,7 @@ export default function AppShell({
     );
   }
 
-  const nav = account.role === "client" ? recordsNav(account.role) : [HOME_ITEM, ...recordsNav(account.role)];
+  const nav = [HOME_ITEM, ...recordsNav(account.role)];
   const menuNav = nav;
 
   return (

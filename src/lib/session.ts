@@ -21,15 +21,26 @@ export type Account = {
   name: string;
   role: Role;
   organizationId: string;
+  /** Company this account belongs to. Meaningful only for role === "client"
+   * profiles by construction — staff/admin never have company_id set under
+   * normal operation (see the Companies branch's own defense-in-depth role
+   * filters). Carried through as-is, no special-casing needed here. */
+  companyId: string | null;
+  /** Whether this account manages its company's roster/application access.
+   * Same "client"-only-by-construction caveat as companyId above. */
+  isCompanyManager: boolean;
 };
 
 /**
- * Post-login landing. Phase 18: admin/staff default to the new Home hub;
- * client is untouched (Applications stays their home — "client gets no Home
- * hub at all" is a locked decision, not an oversight).
+ * Post-login landing. Phase 18 sent admin/staff to the new Home hub while
+ * client stayed on /portal ("client gets no Home hub at all"). That decision
+ * is reversed here, deliberately, as this task's own explicit requirement:
+ * every role now lands on /home. `role` is kept as a parameter (unused) so
+ * every existing call site — `roleHome(account.role)` throughout the app —
+ * keeps working unchanged; only this function's body needed to change.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- see comment above
 export function roleHome(role: Role): string {
-  if (role === "client") return "/portal";
   return "/home";
 }
 
@@ -117,6 +128,8 @@ type ProfileRow = {
   name: string;
   role: Role;
   organization_id: string;
+  company_id: string | null;
+  is_company_manager: boolean;
 };
 
 async function loadAccount(): Promise<Account | null> {
@@ -145,7 +158,7 @@ async function loadAccount(): Promise<Account | null> {
 
     const { data } = await supabase
       .from("agv_profiles")
-      .select("id, name, role, organization_id")
+      .select("id, name, role, organization_id, company_id, is_company_manager")
       .eq("id", user.id)
       .single();
     const profile = (data as ProfileRow | null) ?? null;
@@ -167,6 +180,8 @@ async function loadAccount(): Promise<Account | null> {
       name: profile?.name ?? (meta.name as string) ?? user.email ?? "",
       role: profile?.role ?? "client",
       organizationId: profile?.organization_id ?? "",
+      companyId: profile?.company_id ?? null,
+      isCompanyManager: profile?.is_company_manager ?? false,
     };
   } catch {
     return null;
