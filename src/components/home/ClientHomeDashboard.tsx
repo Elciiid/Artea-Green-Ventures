@@ -1,7 +1,10 @@
 "use client";
 
-// Client's /home dashboard — a status breakdown of applications they can
-// see, a recent activity digest, and direct links into each application.
+// Client's /home dashboard — a recent activity digest and direct links into
+// each application. Originally also carried a status-breakdown strip and a
+// full applications list; both dropped (see STATUS.md) as redundant with
+// /portal's own table — the digest was the one piece both the implementer
+// and an independent reviewer read as genuine new value.
 //
 // fetchApplications() is already scoped by RLS to this account's own live
 // personal grants (agv_has_app_access — "applications — user read granted"),
@@ -24,12 +27,10 @@ import Link from "next/link";
 import { fetchApplicationByReference, fetchApplications } from "@/lib/supabase/applications";
 import type { Application } from "@/lib/mock-data";
 import { formatDate } from "@/lib/format";
-import { buildActivityDigest, mostRecentlyActive, stageCounts, type ActivityDigestEntry } from "@/lib/dashboard";
+import { buildActivityDigest, mostRecentlyActive, type ActivityDigestEntry } from "@/lib/dashboard";
 import { useAsyncResource } from "@/lib/useAsyncResource";
 import { useSession } from "@/lib/session";
 import SurfaceState from "@/components/SurfaceState";
-import StatusChip from "@/components/StatusChip";
-import StatusStrip from "@/components/home/StatusStrip";
 import HomeShell, { HomePanel } from "@/components/home/HomeShell";
 
 const DIGEST_APPLICATION_LIMIT = 5;
@@ -82,63 +83,34 @@ export default function ClientHomeDashboard() {
         className="glass rounded-2xl py-16 text-center backdrop-blur-xl"
       >
         {state.status === "ready" && (
-          <div className="flex flex-col gap-6">
-            <HomePanel title="Status">
-              <StatusStrip counts={stageCounts(state.data.applications)} />
-            </HomePanel>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <HomePanel title="Your applications">
-                <ul className="flex flex-col gap-2">
-                  {state.data.applications.map((app) => (
-                    <li key={app.id}>
-                      <Link
-                        href={`/portal/applications/${app.id}`}
-                        className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition hover:bg-bone/[0.04]"
-                      >
-                        <span className="min-w-0">
-                          <span className="block font-mono text-label tracking-[0.1em] text-ash">
-                            {app.id}
-                          </span>
-                          <span className="block truncate text-sm text-bone">{app.title}</span>
+          <HomePanel title="Recent activity">
+            {state.data.digest.length === 0 ? (
+              <p className="text-sm text-ash">Nothing to show yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {state.data.digest.map((entry, i) => (
+                  <li key={i}>
+                    <Link
+                      href={`/portal/applications/${entry.applicationId}`}
+                      className="block rounded-lg px-2 py-1.5 transition hover:bg-bone/[0.04]"
+                    >
+                      <span className="flex items-center gap-2 text-xs text-ash">
+                        <span>{formatDate(entry.at)}</span>
+                        <span aria-hidden>·</span>
+                        <span className="uppercase tracking-[0.08em]">
+                          {TIMELINE_KIND_LABEL[entry.kind]}
                         </span>
-                        <StatusChip stage={app.stage} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </HomePanel>
-
-              <HomePanel title="Recent activity">
-                {state.data.digest.length === 0 ? (
-                  <p className="text-sm text-ash">Nothing to show yet.</p>
-                ) : (
-                  <ul className="flex flex-col gap-3">
-                    {state.data.digest.map((entry, i) => (
-                      <li key={i}>
-                        <Link
-                          href={`/portal/applications/${entry.applicationId}`}
-                          className="block rounded-lg px-2 py-1.5 transition hover:bg-bone/[0.04]"
-                        >
-                          <span className="flex items-center gap-2 text-xs text-ash">
-                            <span>{formatDate(entry.at)}</span>
-                            <span aria-hidden>·</span>
-                            <span className="uppercase tracking-[0.08em]">
-                              {TIMELINE_KIND_LABEL[entry.kind]}
-                            </span>
-                          </span>
-                          <span className="mt-0.5 block text-sm text-bone">{entry.text}</span>
-                          <span className="mt-0.5 block truncate text-xs text-ash">
-                            {entry.applicationId} · {entry.applicationTitle}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </HomePanel>
-            </div>
-          </div>
+                      </span>
+                      <span className="mt-0.5 block text-sm text-bone">{entry.text}</span>
+                      <span className="mt-0.5 block truncate text-xs text-ash">
+                        {entry.applicationId} · {entry.applicationTitle}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </HomePanel>
         )}
       </SurfaceState>
     </HomeShell>
