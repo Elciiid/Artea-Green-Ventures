@@ -80,7 +80,7 @@ export default function ClientManagerHomeDashboard() {
             </HomePanel>
 
             <HomePanel
-              title="Recently changed"
+              title="Recently submitted"
               action={<HomePillLink href="/portal">All applications →</HomePillLink>}
             >
               {mostRecentlyActive(state.data, RECENT_LIMIT).length === 0 ? (
