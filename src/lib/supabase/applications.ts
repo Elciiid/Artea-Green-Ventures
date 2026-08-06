@@ -2,13 +2,17 @@
 // mock store for every view except /admin/people/access (still 10b-3; it keeps
 // reading src/lib/applications.ts until the grant/revoke UI goes real too).
 //
-// No client-side visibility filtering happens here: RLS (Phase 10b-1)
-// already restricts which rows a query can return, so fetchApplications()
-// and fetchApplicationByReference() run the exact same query for admins and
-// non-admins — the access boundary is enforced by Postgres, not this code.
+// No client-side visibility filtering happens in fetchApplications()/
+// fetchApplicationByReference() themselves: RLS (Phase 10b-1) already
+// restricts which rows a query can return, so both run the exact same query
+// for admins and non-admins — the access boundary is enforced by Postgres,
+// not this code. fetchPersonallyGrantedApplications() below is the one
+// deliberate exception, added after review found a real gap in a
+// company-manager's RLS-widened visibility — see its own doc comment.
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { assertRowReturned } from "@/lib/supabase/assert-write";
+import { fetchApplicationsForAccess } from "@/lib/supabase/access";
 import { PIPELINE, type Application, type DocumentItem, type TimelineEntry, type Stage } from "@/lib/mock-data";
 
 type ApplicationRow = {
@@ -103,9 +107,27 @@ function toApplication(
 
 /**
  * Every application the signed-in account can see. Admins get every row;
- * everyone else gets only what RLS lets through via a live grant in
- * agv_application_access. Same query either way — Postgres does the
+ * staff and a plain client get only what RLS lets through via a live grant
+ * in agv_application_access. Same query either way — Postgres does the
  * filtering (proven in Phase 10b-1).
+ *
+ * CAVEAT added by the My Team work (20260806100000_my_team_manager_read.sql):
+ * a company-manager session also reads every application within their
+ * company's SCOPE via an additional agv_applications policy — a ceiling My
+ * Team's own checklist genuinely needs (it has to show titles/references for
+ * applications nobody's been granted yet, so the manager can choose to grant
+ * them). Because RLS policies are table-wide, not query-scoped, that same
+ * widening applies to THIS function too when a manager calls it — so for a
+ * manager, fetchApplications() can return applications they can read the
+ * row for but hold no personal grant on, and agv_documents/
+ * agv_activity_entries (unchanged, still gated on a personal grant only)
+ * will render those as a fake "0 of 0 received", empty-timeline application
+ * rather than an honest partial view. Any GENERAL list built on this
+ * function (the /portal register, the client-manager Dashboard) must use
+ * fetchPersonallyGrantedApplications() below for a manager instead — see its
+ * own doc comment. My Team's checklist is the one legitimate caller that
+ * wants the wider scope set, and it gets there through team.ts's
+ * applicationsInScope(), not this function.
  */
 export async function fetchApplications(): Promise<Application[]> {
   const supabase = getSupabaseClient();
@@ -115,6 +137,70 @@ export async function fetchApplications(): Promise<Application[]> {
     .order("reference", { ascending: true });
   if (error) throw error;
   return ((data ?? []) as ApplicationRow[]).map((row) => toApplication(row, [], []));
+}
+
+type OwnGrantRow = { application_id: string };
+
+/**
+ * fetchApplications(), narrowed to applications the caller PERSONALLY holds
+ * a live grant for — see fetchApplications()'s own doc comment for why this
+ * differs from it for a company-manager session (and is identical to it,
+ * a harmless no-op filter, for every other role). Reads own live grants from
+ * agv_application_access — whose base "access — own read" RLS policy
+ * (profile_id = auth.uid()) is untouched by the company-scope widening — so
+ * this always reflects a genuine personal grant, never the wider
+ * scope-readable set. The join back to a reference (Application.id is the
+ * display reference, not agv_application_access's uuid FK) reuses
+ * fetchApplicationsForAccess() from access.ts, the same uuid+reference+title
+ * shape team.ts's applicationsInScope() already joins through client-side —
+ * matching this codebase's established pattern rather than a PostgREST
+ * embedded-resource select, which has no precedent elsewhere in this app.
+ */
+export async function fetchPersonallyGrantedApplications(profileId: string): Promise<Application[]> {
+  const supabase = getSupabaseClient();
+  const [applications, accessApplications, ownGrantRows] = await Promise.all([
+    fetchApplications(),
+    fetchApplicationsForAccess(),
+    supabase
+      .from("agv_application_access")
+      .select("application_id")
+      .eq("profile_id", profileId)
+      .is("revoked_at", null),
+  ]);
+  if (ownGrantRows.error) throw ownGrantRows.error;
+
+  const grantedIds = new Set((ownGrantRows.data as OwnGrantRow[] | null ?? []).map((r) => r.application_id));
+  const referenceById = new Map(accessApplications.map((a) => [a.id, a.reference]));
+  const grantedReferences = new Set(
+    [...grantedIds].map((id) => referenceById.get(id)).filter((r): r is string => Boolean(r))
+  );
+  return applications.filter((a) => grantedReferences.has(a.id));
+}
+
+/**
+ * Whether the caller personally holds a live grant for this application's
+ * uuid — distinct from being able to read the agv_applications row at all,
+ * which a company-manager can do more widely (see fetchApplications()'s doc
+ * comment). Used by UserApplicationView to decide whether a manager opening
+ * a scope-only, not-personally-granted application should see an honest
+ * "you don't have personal access to this yet" state instead of the real
+ * detail view, whose documents/activity would otherwise silently render as
+ * a fake-empty application.
+ */
+export async function hasPersonalApplicationGrant(
+  applicationId: string,
+  profileId: string
+): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("agv_application_access")
+    .select("id")
+    .eq("application_id", applicationId)
+    .eq("profile_id", profileId)
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (error) throw error;
+  return data !== null;
 }
 
 /**

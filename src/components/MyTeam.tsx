@@ -15,7 +15,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { fetchLiveGrants, grantAccess, revokeAccess, type LiveGrant } from "@/lib/supabase/access";
-import { loadTeamData } from "@/lib/supabase/team";
+import { inScopeGrantCount, loadTeamData } from "@/lib/supabase/team";
 import { useAsyncResource } from "@/lib/useAsyncResource";
 import { useSession } from "@/lib/session";
 import { Input } from "@/components/ui/input";
@@ -152,7 +152,7 @@ export default function MyTeam() {
             >
               <ul className="flex flex-col gap-2">
                 {pagedRoster.map((profile) => {
-                  const count = grants.filter((g) => g.profile_id === profile.id).length;
+                  const count = inScopeGrantCount(grants, profile.id, applications);
                   const isOpen = expandedId === profile.id;
                   return (
                     <li key={profile.id} className="glass rounded-2xl backdrop-blur-xl">

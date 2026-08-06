@@ -6,18 +6,32 @@
 // Phase 10b-2 — reads real Supabase data; RLS (10b-1) already restricts the
 // rows to whatever this account holds a live grant for, so there's no
 // client-side visibility filtering here anymore.
+//
+// EXCEPT for a company-manager: My Team's migration widened agv_applications'
+// RLS so a manager can also read every application in their company's SCOPE
+// (a grant ceiling My Team's own checklist needs), which — because RLS is
+// table-wide, not query-scoped — leaked into fetchApplications() generally.
+// agv_documents/agv_activity_entries still gate on a personal grant only, so
+// a scope-only application would render here as clickable but then open to a
+// fake "0 of 0 received" empty page. fetchPersonallyGrantedApplications()
+// narrows back down to exactly what a manager can actually open — the same
+// personal-grant-only semantics a regular client already has (see its own
+// doc comment in applications.ts for the full story).
 
 import ApplicationRegister from "@/components/ApplicationRegister";
 import SurfaceState from "@/components/SurfaceState";
-import { fetchApplications } from "@/lib/supabase/applications";
+import { fetchApplications, fetchPersonallyGrantedApplications } from "@/lib/supabase/applications";
 import { useAsyncResource } from "@/lib/useAsyncResource";
 import { useSession } from "@/lib/session";
 
 export default function UserPortalView() {
-  const accountId = useSession((s) => s.account?.id);
+  const account = useSession((s) => s.account);
   const { state } = useAsyncResource(
-    fetchApplications,
-    [accountId],
+    () =>
+      account?.isCompanyManager && account.id
+        ? fetchPersonallyGrantedApplications(account.id)
+        : fetchApplications(),
+    [account?.id, account?.isCompanyManager],
     "Something went wrong loading your applications."
   );
 

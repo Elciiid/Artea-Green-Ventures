@@ -24,9 +24,17 @@ vi.mock("@/lib/supabase/access", () => ({
   revokeAccess: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/team", () => ({
-  loadTeamData: vi.fn(),
-}));
+// Partially mocked: loadTeamData is the network call under test, but
+// inScopeGrantCount is real, pure logic (see team.test.ts for its own
+// dedicated unit tests) — keeping it real here exercises the actual grant
+// count this component renders, not a stand-in.
+vi.mock("@/lib/supabase/team", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/supabase/team")>();
+  return {
+    ...actual,
+    loadTeamData: vi.fn(),
+  };
+});
 
 vi.mock("@/lib/session", () => ({
   useSession: vi.fn(),

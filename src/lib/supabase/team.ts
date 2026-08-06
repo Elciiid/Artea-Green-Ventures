@@ -49,6 +49,26 @@ export function applicationsInScope(
 }
 
 /**
+ * How many of a teammate's live grants fall within the applications actually
+ * rendered in My Team's checklist (`applications`, already narrowed by
+ * applicationsInScope() above) — NOT every live grant that teammate holds.
+ * `grants` (fetchLiveGrants()) is unscoped: it can include a grant an admin
+ * issued OUTSIDE this company's scope (agv_application_access carries no
+ * company_id of its own — scope only lives on agv_company_applications), and
+ * counting those disagreed with the checklist rendered directly below it
+ * (e.g. a teammate could show "3 of 2 apps"). Found on review; regression
+ * covered in team.test.ts.
+ */
+export function inScopeGrantCount(
+  grants: LiveGrant[],
+  profileId: string,
+  applications: AccessApplication[]
+): number {
+  const inScopeIds = new Set(applications.map((a) => a.id));
+  return grants.filter((g) => g.profile_id === profileId && inScopeIds.has(g.application_id)).length;
+}
+
+/**
  * Everything My Team needs for one company. `selfId` excludes the manager's
  * own row from the roster (see TeamData.roster). Both `companyId` and
  * `selfId` come from the caller's own session (`account.companyId`/`id`) —

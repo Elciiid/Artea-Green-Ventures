@@ -1,29 +1,45 @@
 "use client";
 
-// Client-manager's /home dashboard — status-at-a-glance across the
-// manager's own company, explicitly distinct from My Team (/portal/team):
-// this page never reads or renders anything about who has access to what,
-// it only links to My Team for that. fetchApplications() is enough on its
-// own here: a company-manager session gets a widened agv_applications SELECT
-// policy ("applications — manager read company scope", added by
-// 20260806100000_my_team_manager_read.sql) that returns every application in
-// their OWN company's scope — not admin-wide, not another company's — so no
-// extra company_id filtering is needed or possible to add client-side; the
-// same call a plain client makes already returns the right, wider set for a
-// manager purely because of who's asking.
+// Client-manager's /home dashboard — status-at-a-glance, explicitly
+// distinct from My Team (/portal/team): this page never reads or renders
+// anything about who has access to what, it only links to My Team for that.
+//
+// CORRECTED (originally shipped reading company-wide scope, found wrong on
+// review): a company-manager session's agv_applications RLS additionally
+// reads every application within their company's SCOPE (a ceiling My Team's
+// own checklist genuinely needs — see 20260806100000_my_team_manager_read.sql)
+// — but agv_documents/agv_activity_entries still gate on a personal grant
+// only, unaffected by that widening. Calling plain fetchApplications() here
+// meant this page (and /portal, and the application-detail route) could show
+// and link into applications a manager could open the row for but not
+// actually read any documents/activity on — silently rendering "0 of 0
+// received" for what's really a partial, gated view, not a genuinely empty
+// application. fetchPersonallyGrantedApplications() narrows this back down
+// to exactly what a manager can actually open: the same personal-grant-only
+// semantics a regular client already has (see its doc comment in
+// applications.ts). My Team's own checklist keeps using the wider
+// company-scope set on purpose — team.ts's applicationsInScope(), not this.
+//
+// One consequence worth naming plainly: after this fix, this dashboard's
+// application-visibility is now identical to the plain Client dashboard's
+// (personal grants only) — the only thing that still distinguishes it is
+// the "Manage your team" panel. See the task report for the honest
+// assessment of what that means for this page's own reason to exist
+// separately.
 //
 // Deliberately does NOT fetch each application's activity timeline the way
 // the plain Client dashboard does: agv_activity_entries' RLS
-// ("activity — read granted", role_staff_client.sql) still gates on a LIVE
-// PERSONAL grant via agv_has_app_access(), which the company-scope widening
-// above does not extend to activity rows. A manager who hasn't personally
-// been granted a given in-scope application would silently get zero
-// timeline rows for it — the same gap 20260806100000's own header comment
-// documents for a different table. Recency here is therefore the
-// application's own `submitted` date, the same signal the Staff dashboard
-// uses, not an activity digest.
+// ("activity — read granted", role_staff_client.sql) gates on a LIVE
+// PERSONAL grant via agv_has_app_access() — which, now that this page only
+// reads personally-granted applications anyway, IS satisfied for every
+// application it lists. The timeline digest was left out here regardless,
+// to keep this fix narrowly scoped to the visibility bug rather than also
+// adding a new feature in the same pass; worth reconsidering as a follow-up
+// now that the data would actually support it correctly. Recency here is
+// still the application's own `submitted` date, the same signal the Staff
+// dashboard uses.
 
-import { fetchApplications } from "@/lib/supabase/applications";
+import { fetchPersonallyGrantedApplications } from "@/lib/supabase/applications";
 import { formatDate } from "@/lib/format";
 import { mostRecentlyActive, stageCounts } from "@/lib/dashboard";
 import { useAsyncResource } from "@/lib/useAsyncResource";
@@ -39,27 +55,33 @@ const RECENT_LIMIT = 6;
 export default function ClientManagerHomeDashboard() {
   const accountId = useSession((s) => s.account?.id);
   const { state } = useAsyncResource(
-    fetchApplications,
+    () => (accountId ? fetchPersonallyGrantedApplications(accountId) : Promise.resolve([])),
     [accountId],
-    "Something went wrong loading your company's applications."
+    "Something went wrong loading your applications."
   );
 
   return (
     <HomeShell
       eyebrow="Company account"
       title="Dashboard"
-      intro="Status across your company's applications."
+      intro="Status across the applications you have access to."
     >
       <SurfaceState
         loading={state.status === "loading"}
-        loadingLabel="Loading your company's applications…"
+        loadingLabel="Loading your applications…"
         error={state.status === "error" ? state.message : null}
-        errorHeading="We couldn&apos;t load your company's applications"
+        errorHeading="We couldn&apos;t load your applications"
         errorHeadingLevel="h2"
         empty={state.status === "ready" && state.data.length === 0}
         emptyContent={
+          // Deliberately doesn't say "grant yourself access from My Team" —
+          // team.ts's loadTeamData excludes the manager's own row from the
+          // roster (`c.id !== selfId`), so My Team has no self-service path
+          // for this; only an administrator can grant a manager personal
+          // access, same as any other client.
           <p className="text-sm text-ash">
-            Your company doesn&apos;t have any applications in scope yet.
+            You don&apos;t have access to any applications yet. Ask an
+            administrator to grant you access.
           </p>
         }
         className="glass rounded-2xl py-16 text-center backdrop-blur-xl"
