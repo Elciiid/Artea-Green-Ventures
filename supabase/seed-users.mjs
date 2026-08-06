@@ -15,7 +15,11 @@
 // password, set SEED_PASSWORD and re-run.
 //
 // The agv_profiles row for each user is created automatically by the
-// agv_handle_new_user trigger from the metadata below.
+// agv_handle_new_user trigger, but the trigger no longer reads role from
+// metadata (role is client-suppliable via the public anon key and can't be
+// trusted for access control — see 20260805190000_fix_signup_role_injection).
+// Every account below gets an explicit service-role UPDATE of its role right
+// after creation, same as the update branch already did.
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -66,13 +70,17 @@ for (const acct of ACCOUNTS) {
       .eq("id", existing.id);
     console.log(`updated  ${acct.email} (${acct.role})`);
   } else {
-    const { error } = await admin.auth.admin.createUser({
+    const { data: newUser, error } = await admin.auth.admin.createUser({
       email: acct.email,
       password,
       email_confirm: true,
       user_metadata: meta,
     });
     if (error) throw error;
+    // The trigger's default (safe-by-design 'client') won't match every
+    // account here — explicitly set the intended role rather than relying
+    // on metadata the trigger deliberately ignores.
+    await admin.from("agv_profiles").update({ role: acct.role }).eq("id", newUser.user.id);
     console.log(`created  ${acct.email} (${acct.role})`);
   }
 }

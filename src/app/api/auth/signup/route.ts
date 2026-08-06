@@ -80,6 +80,11 @@ export async function POST(request: Request) {
 
     if (isStaff) {
       const supabase = getSupabaseServerClient();
+      // `role: "staff"` in options.data is cosmetic only — agv_handle_new_user()
+      // no longer reads role from user metadata (it's client-suppliable via the
+      // public anon key, so it can never be the source of truth for access
+      // control; see 20260805190000_fix_signup_role_injection). The explicit
+      // service-role UPDATE below is what actually assigns the role.
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -87,6 +92,42 @@ export async function POST(request: Request) {
       });
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      // signUp() against an email that's ALREADY registered doesn't error —
+      // with "Confirm email" on, GoTrue returns an obfuscated user (random
+      // id, identities: []) for an already-confirmed email (enumeration
+      // protection), but the REAL existing user's id, still with
+      // identities: [], for an already-registered-but-UNCONFIRMED one.
+      // Either way, identities is empty exactly when this call did NOT just
+      // create a brand-new auth.users row — only in that case is it safe to
+      // write role. Without this guard, re-submitting signup for someone
+      // else's unconfirmed email would silently reset their existing
+      // profile's role to 'staff', overwriting whatever an admin had set —
+      // a write path that didn't even exist before this fix (the trigger's
+      // `on conflict do nothing` protected existing rows; there was no
+      // route-level UPDATE here at all).
+      const isNewUser = !!data.user && (data.user.identities?.length ?? 0) > 0;
+      if (isNewUser && data.user) {
+        const adminClient = getSupabaseServiceClient();
+        const { error: roleError, data: roleUpdated } = await adminClient
+          .from("agv_profiles")
+          .update({ role: "staff" })
+          .eq("id", data.user.id)
+          .select("id");
+        if (roleError || !roleUpdated || roleUpdated.length === 0) {
+          // Fails safe, not open: agv_handle_new_user()'s own default is
+          // already 'client' (least-privileged), so a failed write here
+          // leaves the new account under-privileged, never over — never a
+          // security issue, just a functional one an admin can correct via
+          // /admin/people/roles. Logged loudly so it's actually noticed
+          // rather than silently discarded, but not worth failing the whole
+          // signup over (the account and session are already valid).
+          console.error(
+            "[api/auth/signup] failed to set role=staff for new user",
+            data.user.id,
+            roleError?.message ?? "zero rows updated"
+          );
+        }
       }
       if (data.session) {
         return NextResponse.json({
@@ -102,7 +143,13 @@ export async function POST(request: Request) {
 
     // Client path — created pre-verified via the Admin API so Supabase never
     // sends (and can never bounce) a confirmation email for an address we
-    // haven't proven ownership of.
+    // haven't proven ownership of. `role: "client"` in user_metadata is
+    // cosmetic only, same reasoning as the staff branch above — this call
+    // already runs under the service_role key, but agv_handle_new_user()
+    // never trusts metadata for role regardless of which key created the
+    // account. It happens to match the trigger's own safe default, so the
+    // explicit UPDATE below is technically redundant right now, but it's kept
+    // so this path doesn't silently depend on that default staying 'client'.
     const adminClient = getSupabaseServiceClient();
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
@@ -114,6 +161,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: createError.message }, { status: 400 });
     }
     const createdId = created.user?.id;
+    if (createdId) {
+      // admin.createUser() errors outright (handled above) rather than
+      // ambiguously merging when the email already exists, so createdId is
+      // always a genuinely brand-new user here — no identities-style guard
+      // needed, unlike the staff branch's signUp() call above.
+      const { error: roleError, data: roleUpdated } = await adminClient
+        .from("agv_profiles")
+        .update({ role: "client" })
+        .eq("id", createdId)
+        .select("id");
+      if (roleError || !roleUpdated || roleUpdated.length === 0) {
+        // Same fail-safe reasoning as the staff branch: this UPDATE is
+        // technically redundant against the trigger's own 'client' default,
+        // so a failure here can't under- or over-privilege anyone — logged
+        // for visibility only, never worth failing the signup over.
+        console.error(
+          "[api/auth/signup] failed to confirm role=client for new user",
+          createdId,
+          roleError?.message ?? "zero rows updated"
+        );
+      }
+    }
 
     // createUser() doesn't return a session — sign in immediately so the
     // browser can hydrate its own session, same contract as the staff path.
