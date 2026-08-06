@@ -145,16 +145,26 @@ type OwnGrantRow = { application_id: string };
  * fetchApplications(), narrowed to applications the caller PERSONALLY holds
  * a live grant for — see fetchApplications()'s own doc comment for why this
  * differs from it for a company-manager session (and is identical to it,
- * a harmless no-op filter, for every other role). Reads own live grants from
- * agv_application_access — whose base "access — own read" RLS policy
- * (profile_id = auth.uid()) is untouched by the company-scope widening — so
- * this always reflects a genuine personal grant, never the wider
- * scope-readable set. The join back to a reference (Application.id is the
- * display reference, not agv_application_access's uuid FK) reuses
- * fetchApplicationsForAccess() from access.ts, the same uuid+reference+title
- * shape team.ts's applicationsInScope() already joins through client-side —
- * matching this codebase's established pattern rather than a PostgREST
- * embedded-resource select, which has no precedent elsewhere in this app.
+ * a harmless no-op filter, for every other role).
+ *
+ * IMPORTANT — `profileId` must always be the CALLER'S OWN id. The
+ * narrowing here is enforced by the explicit `.eq("profile_id", profileId)`
+ * filter below, NOT by RLS: for a manager session, agv_application_access's
+ * SELECT policy is the OR of "access — own read" (profile_id = auth.uid())
+ * and "access — manager read within company" (20260805130000), so RLS alone
+ * would happily return a same-company teammate's grants too. Passing a
+ * teammate's id here would silently render THEIR grants labeled as
+ * "personal," against the CALLER's own document/activity gating — exactly
+ * the cross-surface mismatch this function exists to prevent, reintroduced
+ * one layer up. Both current call sites pass their own account.id; keep it
+ * that way.
+ *
+ * The join back to a reference (Application.id is the display reference,
+ * not agv_application_access's uuid FK) reuses fetchApplicationsForAccess()
+ * from access.ts, the same uuid+reference+title shape team.ts's
+ * applicationsInScope() already joins through client-side — matching this
+ * codebase's established pattern rather than a PostgREST embedded-resource
+ * select, which has no precedent elsewhere in this app.
  */
 export async function fetchPersonallyGrantedApplications(profileId: string): Promise<Application[]> {
   const supabase = getSupabaseClient();

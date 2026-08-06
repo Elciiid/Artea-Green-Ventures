@@ -67,10 +67,16 @@ function recordsNav(role: Role, isCompanyManager: boolean): NavItem[] {
           label: "Applications",
           match: (p) => p === "/portal" || p.startsWith("/portal/applications"),
         },
-        // Staff never has isCompanyManager set (company assignment is
-        // client-only by construction — see session.ts), so this is
-        // effectively client-only without needing an explicit role check
-        // here too.
+        // isCompanyManager alone, no explicit role check — company
+        // assignment is intended to be client-only, but nothing at the
+        // schema layer enforces that (company_id/is_company_manager are
+        // independent of role; see the defense-in-depth role filters added
+        // in 20260805160000/20260805170000, which exist precisely because a
+        // staff account CAN have is_company_manager set via a
+        // misconfigured /api/admin/set-company call). A misconfigured staff
+        // account would see this pill, but /portal/team's own
+        // requireCompanyManager + role gating still redirects them away —
+        // this pill showing is cosmetic, not an access-control gap.
         ...(isCompanyManager
           ? [
               {
@@ -95,7 +101,6 @@ const HOME_ITEM: NavItem = {
 export default function AppShell({
   expect,
   requireCompanyManager = false,
-  centerContent = false,
   boundedContent = false,
   children,
 }: {
@@ -108,10 +113,6 @@ export default function AppShell({
    * client (isCompanyManager: false) hitting a page gated this way is
    * redirected away exactly like a role mismatch. */
   requireCompanyManager?: boolean;
-  /** Vertically centers the page's content within the shell instead of
-   * top-aligning it — appropriate for a landing/orientation surface (Home),
-   * not for task pages where it pushes short content below the fold. */
-  centerContent?: boolean;
   /** Locks the shell to exactly the viewport height instead of a min-height
    * that grows with content — header/nav and footer stay pinned, and the
    * page itself never scrolls. Callers that need this (a list that can grow
@@ -307,7 +308,7 @@ export default function AppShell({
         id="main-content"
         className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 sm:px-8 ${
           boundedContent ? "py-6" : "py-12"
-        } ${centerContent ? "justify-center" : ""} ${boundedContent ? "min-h-0" : ""}`}
+        } ${boundedContent ? "min-h-0" : ""}`}
       >
         {children}
       </main>
