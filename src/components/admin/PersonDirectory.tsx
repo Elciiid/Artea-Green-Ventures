@@ -5,15 +5,14 @@
 // Directory tab exactly, see docs/superpowers/plans/2026-08-07-artea-
 // green-glow-reskin.md), each row showing an inline role pill-group.
 //
-// One deliberate deviation from the reference: its pill group applies a
-// role change instantly on click (its own local useState, no confirmation
-// — reasonable for a mockup with fake data, not for a real admin console).
-// Clicking a *different* role here still opens RoleChangeDialog exactly as
-// before — same pre-select, same admin-promotion warning, same self-
-// demotion guard. The pill group is a visual preview of the current role
-// and an entry point into that real flow, not a literal instant-apply
-// control. Flagged here rather than silently keeping the old click-card
-// pattern or silently adopting the reference's unsafe instant-apply one.
+// Per direct correction, the pill group applies a role change instantly on
+// click — no confirmation dialog — matching the reference exactly (an
+// earlier pass routed this through RoleChangeDialog first; that component
+// is now unused and deleted). This is still safe against a real backend:
+// setProfileRole() goes through the service-role /api/admin/set-role route,
+// which is the actual enforcement point for the self-demotion guard (own
+// row's pills are also kept inert client-side, purely so that rejection
+// never has to round-trip) — nothing about instant-apply here bypasses it.
 //
 // Company name isn't shown for the same reason email isn't: this app has
 // no per-profile email exposed to an RLS-scoped client query (the
@@ -34,7 +33,6 @@ import {
 import { fetchCompanies, type Company } from "@/lib/supabase/companies";
 import { useAsyncResource } from "@/lib/useAsyncResource";
 import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
-import RoleChangeDialog from "@/components/admin/RoleChangeDialog";
 import SimplePagination from "@/components/admin/SimplePagination";
 import SurfaceState from "@/components/SurfaceState";
 
@@ -52,8 +50,8 @@ function loadDirectory(): Promise<DirectoryData> {
 
 export default function PersonDirectory() {
   const { state, refetch } = useAsyncResource(loadDirectory, [], "Couldn't load the directory.");
-  const [editing, setEditing] = useState<ProfileForRoleAssignment | null>(null);
   const [page, setPage] = useState(1);
+  const [busyId, setBusyId] = useState<string | null>(null);
   // An admin can't change their own role — the API route rejects a
   // self-targeted write with a 403 regardless of what the UI does. This just
   // makes that visible up front (own row's pills are inert, badged "you")
@@ -61,15 +59,17 @@ export default function PersonDirectory() {
   // Client-side polish only; the route is the actual enforcement.
   const selfId = useSession((s) => s.account)?.id ?? null;
 
-  async function handleRoleChange(role: Role) {
-    if (!editing) return;
+  async function handleRoleChange(person: ProfileForRoleAssignment, role: Role) {
+    if (role === person.role) return;
+    setBusyId(person.id);
     try {
-      await setProfileRole(editing.id, role);
-      toast.success(`${editing.name} is now ${role}.`);
-      setEditing(null);
+      await setProfileRole(person.id, role);
+      toast.success(`${person.name} is now ${role}.`);
       refetch();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't change role.");
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -138,8 +138,8 @@ export default function PersonDirectory() {
                   <button
                     key={role}
                     type="button"
-                    disabled={person.id === selfId}
-                    onClick={() => setEditing(person)}
+                    disabled={person.id === selfId || busyId === person.id}
+                    onClick={() => handleRoleChange(person, role)}
                     aria-label={
                       role === person.role
                         ? `${person.name}'s current role: ${role}`
@@ -170,15 +170,6 @@ export default function PersonDirectory() {
           </div>
         )}
       </SurfaceState>
-
-      <RoleChangeDialog
-        person={editing}
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null);
-        }}
-        onConfirm={handleRoleChange}
-      />
     </div>
   );
 }
