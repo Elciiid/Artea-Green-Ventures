@@ -84,6 +84,13 @@
 
 html {
   color-scheme: light;
+  /* Reserves the vertical scrollbar's width whether or not the current page
+     actually needs to scroll — without this, navigating between a short page
+     (no scrollbar) and a tall one (Dashboard, with its stat tiles/activity
+     feed) changes the viewport's available width, and the header's
+     mx-auto-centered content visibly shifts sideways on every such route
+     change. */
+  scrollbar-gutter: stable;
 }
 
 /* Flat bordered card — the reskin's replacement for the old frosted-glass
