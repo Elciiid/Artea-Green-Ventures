@@ -246,8 +246,16 @@ export default function AppShell({
           className={`mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6 ${heroHeader ? "lg:px-10" : ""}`}
         >
           <div className="col-start-1 flex items-center gap-3">
-            <Link href={roleHome(account.role)} className="flex shrink-0 items-center">
+            <Link href={roleHome(account.role)} className="flex shrink-0 items-center gap-3">
               <Wordmark variant={heroHeader ? "white" : "green"} />
+              {!heroHeader && (
+                <>
+                  <span aria-hidden className="hidden h-5 w-px bg-ash/25 sm:block" />
+                  <span className="hidden text-xs font-medium uppercase tracking-[0.2em] text-ash transition-colors hover:text-bone sm:block">
+                    Home
+                  </span>
+                </>
+              )}
             </Link>
 
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>

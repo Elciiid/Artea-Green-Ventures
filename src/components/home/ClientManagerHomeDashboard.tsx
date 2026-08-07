@@ -1,6 +1,6 @@
 "use client";
 
-// Client-manager's /home dashboard — status-at-a-glance, explicitly
+// Client-manager's Dashboard (/dashboard) — status-at-a-glance, explicitly
 // distinct from My Team (/portal/team): this page never reads or renders
 // anything about who has access to what, it only links to My Team for that.
 //

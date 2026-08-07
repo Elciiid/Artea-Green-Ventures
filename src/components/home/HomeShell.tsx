@@ -55,3 +55,26 @@ export function HomePillLink({ href, children }: { href: string; children: React
     </Link>
   );
 }
+
+/** A single stat tile — matches the reference Dashboard's own stat-tile row
+ * exactly (eyebrow label, large bold value, light note), for dashboards
+ * that have real numbers worth that visual weight. Not every dashboard
+ * uses this; StatusStrip-style compact rows stay inside a plain HomePanel
+ * where a big tile would overstate a small number. */
+export function StatTile({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: React.ReactNode;
+  note?: string;
+}) {
+  return (
+    <div className="rounded-sm border border-ash/20 bg-pine p-6">
+      <p className="eyebrow text-ash">{label}</p>
+      <p className="mt-4 text-4xl font-bold tracking-tight text-bone">{value}</p>
+      {note && <p className="mt-2 text-xs font-light text-ash">{note}</p>}
+    </div>
+  );
+}

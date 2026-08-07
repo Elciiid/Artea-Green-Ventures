@@ -1,6 +1,6 @@
 "use client";
 
-// Client's /home dashboard — a recent activity digest and direct links into
+// Client's Dashboard (/dashboard) — a recent activity digest and direct links into
 // each application. Originally also carried a status-breakdown strip and a
 // full applications list; both dropped (see STATUS.md) as redundant with
 // /portal's own table — the digest was the one piece both the implementer

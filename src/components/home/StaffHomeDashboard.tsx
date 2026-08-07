@@ -1,6 +1,6 @@
 "use client";
 
-// Staff's /home dashboard. fetchApplications() already returns only the
+// Staff's Dashboard (/dashboard). fetchApplications() already returns only the
 // applications this staff account holds a live grant for (RLS — see
 // applications.ts's own doc comment); nothing here assumes admin-level
 // visibility into every application in the system.
