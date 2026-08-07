@@ -18,7 +18,7 @@ import PeopleSectionHeading from "@/components/admin/PeopleSectionHeading";
 import SimplePagination from "@/components/admin/SimplePagination";
 import SurfaceState from "@/components/SurfaceState";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 type Tab = "logins" | "activity";
 
@@ -89,24 +89,34 @@ export default function ActivityLog() {
   return (
     <section
       aria-label="Activity log"
-      className="glass flex h-full min-h-0 flex-col rounded-2xl p-6 backdrop-blur-xl sm:p-7"
+      className="flex h-full min-h-0 flex-col rounded-sm border border-ash/20 bg-pine p-6 shadow-panel sm:p-7"
     >
-      <div className="shrink-0">
-        <PeopleSectionHeading
-          label="Activity log"
-          description="Recent sign-in/sign-up activity and in-app changes. Read-only, most recent first."
-        />
-      </div>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as Tab)}
+        className="flex h-full min-h-0 flex-col"
+      >
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+          <PeopleSectionHeading
+            label="Activity log"
+            description="Recent sign-in/sign-up activity and in-app changes. Read-only, most recent first."
+          />
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="mt-5 h-full min-h-0">
-        <TabsList variant="line" className="w-full shrink-0 justify-start border-b border-ash/20 bg-transparent p-0">
-          <TabsTrigger value="logins" className="flex-none data-active:text-signal after:bg-signal">
-            Sign-in / sign-up
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="flex-none data-active:text-signal after:bg-signal">
-            In-app activity
-          </TabsTrigger>
-        </TabsList>
+          <TabsList className="w-fit gap-1 rounded-full border border-ash/20 bg-void/50 p-1">
+            <TabsTrigger
+              value="logins"
+              className="rounded-full px-3 py-1 text-xs font-medium data-active:bg-signal data-active:text-void data-active:shadow-none"
+            >
+              Sign-in / sign-up
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="rounded-full px-3 py-1 text-xs font-medium data-active:bg-signal data-active:text-void data-active:shadow-none"
+            >
+              In-app activity
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="logins" className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto">

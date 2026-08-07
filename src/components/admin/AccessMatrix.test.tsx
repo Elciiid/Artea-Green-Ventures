@@ -54,13 +54,11 @@ function renderMatrix() {
   );
 }
 
-// Expands the person's row so their per-application checkboxes render, then
-// returns the checkbox for the given application.
-async function openRowAndGetCheckbox(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = await screen.findByRole("button", {
-    name: new RegExp(`^${profile.name}, ${profile.role}, \\d+ of 1 applications$`),
-  });
-  await user.click(trigger);
+// Table layout (docs/superpowers/plans/2026-08-07-artea-green-glow-reskin.md,
+// Access tab reskin): every person's row and its per-application checkboxes
+// render directly, no expand step — this just finds the one checkbox that
+// matters for a given test.
+function getCheckbox() {
   return screen.findByRole("checkbox", {
     name: new RegExp(`${profile.name}'s access to ${app.title}$`),
   });
@@ -81,7 +79,7 @@ describe("AccessMatrix", () => {
     mockGrantAccess.mockResolvedValue(undefined);
 
     renderMatrix();
-    const checkbox = await openRowAndGetCheckbox(user);
+    const checkbox = await getCheckbox();
     expect(checkbox).toHaveAttribute("aria-checked", "false");
 
     await user.click(checkbox);
@@ -101,7 +99,7 @@ describe("AccessMatrix", () => {
     mockRevokeAccess.mockResolvedValue(undefined);
 
     renderMatrix();
-    const checkbox = await openRowAndGetCheckbox(user);
+    const checkbox = await getCheckbox();
     expect(checkbox).toHaveAttribute("aria-checked", "true");
 
     await user.click(checkbox);
@@ -119,7 +117,7 @@ describe("AccessMatrix", () => {
     mockRevokeAccess.mockRejectedValue(new Error("boom"));
 
     renderMatrix();
-    const checkbox = await openRowAndGetCheckbox(user);
+    const checkbox = await getCheckbox();
 
     await user.click(checkbox);
 
@@ -127,7 +125,7 @@ describe("AccessMatrix", () => {
     expect(toast).toBeInTheDocument();
     // The write failed, so the checkbox must not have flipped to unchecked.
     expect(
-      within(checkbox.closest("li")!).getByRole("checkbox")
+      within(checkbox.closest("tr")!).getByRole("checkbox")
     ).toHaveAttribute("aria-checked", "true");
   });
 });

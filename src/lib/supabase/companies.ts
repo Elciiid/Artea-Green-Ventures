@@ -82,6 +82,22 @@ export async function createCompany(name: string, createdBy: string | null): Pro
   return data as Company;
 }
 
+/** Deletes a company outright — a real, irreversible action the reference's
+ * mockup treats as free (its own local-state Delete button just filters the
+ * array). Deliberately does NOT try to clear roster members' company_id
+ * itself first: agv_profiles.company_id -> agv_companies has no ON DELETE
+ * clause (confirmed in 20260805100000_agv_companies.sql, unlike
+ * agv_company_applications's CASCADE), so Postgres itself safely rejects
+ * deleting a company that still has roster members with a foreign-key
+ * violation, rather than this needing to orchestrate a two-step clear-then-
+ * delete that could partially fail. The caller surfaces that error as
+ * "remove the roster first" rather than a raw Postgres error string. */
+export async function deleteCompany(companyId: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.from("agv_companies").delete().eq("id", companyId);
+  if (error) throw error;
+}
+
 /** Every client profile in the system, assigned or not. One query serves
  * three call sites: the company list's roster counts, the unassigned-clients
  * section, and a company detail page's roster + add-to-roster candidate

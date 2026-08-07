@@ -16,13 +16,17 @@ export type ProfileForRoleAssignment = {
   id: string;
   name: string;
   role: Role;
+  /** Added for the reskin's Directory row (company name next to a client's
+   * role) — meaningless for admin/staff by construction, same caveat as
+   * every other company_id field in this app. */
+  company_id: string | null;
 };
 
 export async function fetchAllProfiles(): Promise<ProfileForRoleAssignment[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("agv_profiles")
-    .select("id, name, role")
+    .select("id, name, role, company_id")
     .order("name", { ascending: true });
   if (error) throw error;
   return (data ?? []) as ProfileForRoleAssignment[];

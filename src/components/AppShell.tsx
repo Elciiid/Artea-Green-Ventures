@@ -16,17 +16,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { LayoutDashboard, FileText, Users, Building2, UsersRound, type LucideIcon } from "lucide-react";
 import { roleHome, showDevTools, useSession, type Role } from "@/lib/session";
 import { useApplications } from "@/lib/applications";
 import { Wordmark } from "@/components/Logo";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -156,7 +150,6 @@ export default function AppShell({
   const resetDemo = useApplications((s) => s.resetDemo);
   const router = useRouter();
   const pathname = usePathname();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const allowedRoles = useMemo(
     () => (expect === undefined ? null : Array.isArray(expect) ? expect : [expect]),
@@ -181,9 +174,9 @@ export default function AppShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, account, allowedRoles, requireCompanyManager, router]);
 
-  // Close both menus whenever the route changes.
+  // Close the account menu whenever the route changes. The dock (below)
+  // needs no such reset — it's a plain link row, never an open/close menu.
   useEffect(() => {
-    setMobileNavOpen(false);
     setAccountMenuOpen(false);
   }, [pathname]);
 
@@ -207,7 +200,6 @@ export default function AppShell({
   }
 
   const nav = [HOME_ITEM, ...recordsNav(account.role, account.isCompanyManager)];
-  const menuNav = nav;
 
   return (
     // min-h-full, not min-h-dvh: dvh is an absolute viewport unit, so it
@@ -257,38 +249,6 @@ export default function AppShell({
                 </>
               )}
             </Link>
-
-            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Toggle navigation menu"
-                  className={`ml-1 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition lg:hidden ${
-                    heroHeader
-                      ? "border-rail-ink/35 text-rail-ink hover:border-rail-ink"
-                      : "border-ash/25 text-ash hover:border-signal/50 hover:text-bone"
-                  }`}
-                >
-                  <svg aria-hidden width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-                    <path d="M2 4.5h14M2 9h14M2 13.5h14" />
-                  </svg>
-                  Menu
-                </button>
-              </SheetTrigger>
-              <SheetContent side="left" className="glass data-[side=left]:w-72">
-                <SheetHeader>
-                  <SheetTitle className="font-display text-bone">Navigation</SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Jump to any section of AGV Home.
-                  </SheetDescription>
-                </SheetHeader>
-                <nav aria-label="Primary" className="flex flex-col gap-1 px-4 pb-4">
-                  {menuNav.map((item) => (
-                    <MenuNavLink key={item.href} item={item} active={item.match(pathname)} />
-                  ))}
-                </nav>
-              </SheetContent>
-            </Sheet>
           </div>
 
           {/* center nav — plain text links, desktop only */}
@@ -359,6 +319,8 @@ export default function AppShell({
         </div>
       </header>
 
+      <Dock nav={nav} pathname={pathname} light={heroHeader} />
+
       <main
         id="main-content"
         className={
@@ -397,17 +359,62 @@ export default function AppShell({
   );
 }
 
-function MenuNavLink({ item, active }: { item: NavItem; active: boolean }) {
+// One icon per nav label — small, closed set (Dashboard/Applications/
+// People/Companies/My Team), a lookup is simpler than threading an icon
+// through NavItem/recordsNav() for every call site.
+const DOCK_ICONS: Record<string, LucideIcon> = {
+  Dashboard: LayoutDashboard,
+  Applications: FileText,
+  People: Users,
+  Companies: Building2,
+  "My Team": UsersRound,
+};
+
+/** Replaces the hamburger + slide-out Sheet below `lg`: a fixed, floating
+ * icon dock, matching a reference the user provided directly (a macOS-
+ * style dock with hover tooltips), not the artea-green-glow repo itself —
+ * that reference has no documented mobile nav pattern at all. Each icon's
+ * label shows in a Tooltip on hover; the icon + aria-label alone (not
+ * hover text, which touch has no equivalent for) is what actually carries
+ * meaning on a phone. */
+function Dock({
+  nav,
+  pathname,
+  light,
+}: {
+  nav: NavItem[];
+  pathname: string;
+  light: boolean;
+}) {
   return (
-    <Link
-      href={item.href}
-      aria-current={active ? "page" : undefined}
-      className={`block rounded-lg px-3 py-1.5 text-sm transition ${
-        active ? "bg-void/60 font-semibold text-signal" : "text-ash hover:bg-void/40 hover:text-bone"
+    <nav
+      aria-label="Primary"
+      className={`fixed inset-x-0 bottom-4 z-40 mx-auto flex w-fit items-center gap-1 rounded-full border px-2 py-2 shadow-pop backdrop-blur-sm lg:hidden ${
+        light ? "border-rail-ink/20 bg-rail/90" : "border-rail-ink/10 bg-rail/95"
       }`}
     >
-      {item.label}
-    </Link>
+      {nav.map((item) => {
+        const active = item.match(pathname);
+        const Icon = DOCK_ICONS[item.label] ?? LayoutDashboard;
+        return (
+          <Tooltip key={item.href}>
+            <TooltipTrigger asChild>
+              <Link
+                href={item.href}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                  active ? "bg-signal text-void" : "text-rail-ink/80 hover:bg-rail-ink/10 hover:text-rail-ink"
+                }`}
+              >
+                <Icon aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="top">{item.label}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </nav>
   );
 }
 
