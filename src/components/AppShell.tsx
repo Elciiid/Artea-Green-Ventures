@@ -218,7 +218,7 @@ export default function AppShell({
         className={
           heroHeader
             ? "absolute inset-x-0 top-0 z-30 shrink-0"
-            : "sticky top-0 z-40 shrink-0 border-b border-ash/15 bg-void/85 backdrop-blur"
+            : "sticky top-0 z-40 shrink-0 border-b border-ash/15 bg-void/60 shadow-panel backdrop-blur-xl"
         }
       >
         {/* A plain 3-child justify-between flex only looks centered when the
@@ -235,7 +235,7 @@ export default function AppShell({
             Verified via computed grid-template-columns + child rects at
             768/1024/1440px. */}
         <div
-          className={`mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6 ${heroHeader ? "lg:px-10" : ""}`}
+          className={`mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 sm:px-6 ${heroHeader ? "lg:px-10" : ""}`}
         >
           <div className="col-start-1 flex items-center gap-3">
             <Link href={roleHome(account.role)} className="flex shrink-0 items-center gap-3">

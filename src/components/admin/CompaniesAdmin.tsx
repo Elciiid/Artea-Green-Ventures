@@ -215,7 +215,7 @@ export default function CompaniesAdmin() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow text-signal">Admin console</p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-bone sm:text-5xl">

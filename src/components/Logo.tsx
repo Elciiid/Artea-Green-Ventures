@@ -17,7 +17,7 @@ export function Wordmark({ variant = "green" }: { variant?: "green" | "white" })
       src={logo}
       alt="Artea Green Ventures"
       priority
-      className="h-8 w-auto sm:h-9"
+      className="h-7 w-auto sm:h-8"
     />
   );
 }
