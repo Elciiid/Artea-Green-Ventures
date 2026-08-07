@@ -1,24 +1,20 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
-import Dashboard from "@/components/home/Dashboard";
+import HomeLanding from "@/components/home/HomeLanding";
 
 export const metadata: Metadata = { title: "AGV Home" };
 
-// Post-login default for every role (Phase 18 sent only admin/staff here;
-// reversed for client per this task's own explicit requirement — see
-// roleHome() in src/lib/session.ts). AppShell's expect list is the route
-// guard that enforces who may land here, the same mechanism every other
-// role-gated page in this app uses.
-//
-// centerContent dropped: that prop vertically centers short content, which
-// was right for the old single-hero HomeLanding but is exactly the
-// "excessive vertical spacing" bug this codebase has hit before once real
-// dashboard content with several sections replaced a lone hero — see
-// AppShell's own doc comment for centerContent's intended scope.
+// Home — the app's own landing/orientation page, reached via the logo
+// (top-left) and the post-login default for every role (roleHome() in
+// src/lib/session.ts). Distinct from Dashboard (/dashboard, in the nav
+// row), matching the reference repo's own route split — see
+// docs/superpowers/plans/2026-08-07-artea-green-glow-reskin.md.
+// fullBleed: Hero needs genuine full-viewport width, not AppShell's normal
+// max-w-6xl content column — see AppShell's own doc comment on the prop.
 export default function HomePage() {
   return (
-    <AppShell expect={["admin", "staff", "client"]}>
-      <Dashboard />
+    <AppShell expect={["admin", "staff", "client"]} fullBleed>
+      <HomeLanding />
     </AppShell>
   );
 }

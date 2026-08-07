@@ -1,10 +1,9 @@
 "use client";
 
-// AGV Home — role-branched dashboard. This replaces HomeLanding.tsx's
-// content wholesale (see git history for the earlier single-hero version;
-// that composition, and the announcements/directory/resources tile row it
-// once linked to, are gone — see STATUS.md for the decision to drop those
-// three features).
+// AGV Dashboard (/dashboard) — role-branched operational content, distinct
+// from Home (/home). Moved here from /home as part of the artea-green-glow
+// reskin's route split — see docs/superpowers/plans/2026-08-07-artea-green-
+// glow-reskin.md.
 //
 // This is deliberately the ONLY place in the app that reads
 // account.role/account.isCompanyManager to pick a dashboard body — every

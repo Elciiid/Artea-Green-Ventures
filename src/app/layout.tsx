@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Inter, JetBrains_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import SupabaseAuthListener from "@/components/SupabaseAuthListener";
 import DemoBanner from "@/components/DemoBanner";
@@ -7,21 +7,14 @@ import AxeReporter from "@/components/dev/AxeReporter";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+// Reskinned to match artea-green-glow (docs/superpowers/plans/2026-08-07-
+// artea-green-glow-reskin.md), which loads only Outfit — Inter and
+// JetBrains Mono are gone; --font-mono now falls back to the system
+// monospace stack (globals.css), matching the reference's own plain
+// font-mono utility usage for reference numbers.
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -35,17 +28,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F1F3F1",
+  themeColor: "#FCFCFA",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable}`}
-    >
+    <html lang="en" className={outfit.variable}>
       <body>
         {/* wrapped in a landmark so the link itself isn't orphaned content
             (axe "region" rule) */}

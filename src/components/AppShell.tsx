@@ -89,19 +89,22 @@ function recordsNav(role: Role, isCompanyManager: boolean): NavItem[] {
       ];
 }
 
-// Shown for every role — the earlier "client gets no Home hub at all"
-// decision (Phase 18) has been deliberately reversed; every role now lands
-// on /home (see roleHome() in src/lib/session.ts) and gets this nav item.
+// Shown for every role. Distinct from Home (/home — the logo's destination
+// and post-login default, roleHome() in src/lib/session.ts): this is the
+// per-role Dashboard content, not the landing page. Matches the reference
+// repo's own route split (index.tsx marketing page vs. dashboard.tsx) —
+// see docs/superpowers/plans/2026-08-07-artea-green-glow-reskin.md.
 const HOME_ITEM: NavItem = {
-  href: "/home",
+  href: "/dashboard",
   label: "Dashboard",
-  match: (p) => p === "/home" || p.startsWith("/home/"),
+  match: (p) => p === "/dashboard" || p.startsWith("/dashboard/"),
 };
 
 export default function AppShell({
   expect,
   requireCompanyManager = false,
   boundedContent = false,
+  fullBleed = false,
   children,
 }: {
   expect?: Role | Role[];
@@ -122,6 +125,13 @@ export default function AppShell({
    * (no fixed pixel heights anywhere; header/main/footer just share the
    * viewport via ordinary flex distribution). */
   boundedContent?: boolean;
+  /** Drops <main>'s max-w-6xl/px-5/py-12 constraint entirely — for Home's
+   * landing page (artea-green-glow reskin), whose Hero needs a genuine
+   * full-viewport-width image, not just padding cancelled via a negative
+   * margin (which still can't escape the parent's max-width). The caller
+   * becomes responsible for every section's own container/padding, same as
+   * the reference's index.tsx not using its shared PortalShell at all. */
+  fullBleed?: boolean;
   children: React.ReactNode;
 }) {
   const account = useSession((s) => s.account);
@@ -196,7 +206,7 @@ export default function AppShell({
     <div
       className={`relative flex flex-col ${boundedContent ? "h-full overflow-hidden" : "min-h-full"}`}
     >
-      <header className="sticky top-0 z-40 shrink-0">
+      <header className="sticky top-0 z-40 shrink-0 border-b border-ash/15 bg-void/85 backdrop-blur">
         {/* A plain 3-child justify-between flex only looks centered when the
             two flanking groups happen to be equal width — they aren't here
             (logo+Menu button on the left vs. name badge+avatar on the right,
@@ -213,7 +223,7 @@ export default function AppShell({
         <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6">
           <div className="col-start-1 flex items-center gap-3">
             <Link href={roleHome(account.role)} className="flex shrink-0 items-center">
-              <Wordmark hideTagOnMobile />
+              <Wordmark />
             </Link>
 
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -229,7 +239,7 @@ export default function AppShell({
                   Menu
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="glass data-[side=left]:w-72 backdrop-blur-xl">
+              <SheetContent side="left" className="glass data-[side=left]:w-72">
                 <SheetHeader>
                   <SheetTitle className="font-display text-bone">Navigation</SheetTitle>
                   <SheetDescription className="sr-only">
@@ -245,13 +255,10 @@ export default function AppShell({
             </Sheet>
           </div>
 
-          {/* center nav — plain text, dot-separated, desktop only */}
-          <nav aria-label="Primary" className="col-start-2 hidden items-center gap-3 lg:flex">
-            {nav.map((item, i) => (
-              <div key={item.href} className="flex items-center gap-3">
-                {i > 0 && <span className="text-ash/40">•</span>}
-                <PillLink item={item} active={item.match(pathname)} />
-              </div>
+          {/* center nav — plain text links, desktop only */}
+          <nav aria-label="Primary" className="col-start-2 hidden items-center gap-7 lg:flex">
+            {nav.map((item) => (
+              <PillLink key={item.href} item={item} active={item.match(pathname)} />
             ))}
           </nav>
 
@@ -270,7 +277,7 @@ export default function AppShell({
                   {account.name.charAt(0)}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass w-60 backdrop-blur-xl">
+              <DropdownMenuContent align="end" className="glass w-60">
                 <DropdownMenuLabel className="px-3 py-2 font-normal">
                   <p className="text-sm font-medium text-bone">{account.name}</p>
                   <p className="mt-1 inline-block rounded-full border border-ash/30 px-2 py-0.5 text-label uppercase tracking-[0.12em] text-ash">
@@ -306,32 +313,32 @@ export default function AppShell({
 
       <main
         id="main-content"
-        className={`relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 sm:px-8 ${
-          boundedContent ? "py-6" : "py-12"
-        } ${boundedContent ? "min-h-0" : ""}`}
+        className={
+          fullBleed
+            ? "relative z-10 flex w-full flex-1 flex-col"
+            : `relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 sm:px-8 ${
+                boundedContent ? "py-6" : "py-12"
+              } ${boundedContent ? "min-h-0" : ""}`
+        }
       >
         {children}
       </main>
 
       <footer className="relative z-10 shrink-0 border-t border-ash/15">
         <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-2 text-xs font-light text-ash sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-display text-sm font-bold text-bone">
-                Artea Green Ventures
-              </p>
-              <p className="mt-1 text-xs text-ash">
-                Environmental compliance · Australia &amp; the Philippines
-              </p>
+              <p className="font-medium text-bone">Artea Green Ventures</p>
+              <p>Environmental compliance · Australia &amp; the Philippines</p>
             </div>
-            <div className="text-xs text-ash sm:text-right">
+            <div className="sm:text-right">
               {/* gated on showDevTools() for consistency with the login
                   "Demo build" chip — the "illustrative, not official" notice
                   must not linger over real records in production */}
               {showDevTools() && (
-                <p>Demo environment — records shown are illustrative, not official.</p>
+                <p>Demo environment · records shown are illustrative, not official.</p>
               )}
-              <p className="mt-1">© 2026 Artea Green Ventures</p>
+              <p>© 2026 Artea Green Ventures</p>
             </div>
           </div>
         </div>
@@ -359,10 +366,8 @@ function PillLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`border-b-2 pb-0.5 text-sm transition ${
-        active
-          ? "border-signal font-bold text-signal"
-          : "border-transparent font-medium text-ash hover:text-bone"
+      className={`text-sm transition-colors ${
+        active ? "font-medium text-signal" : "font-light text-ash hover:text-bone"
       }`}
     >
       {item.label}

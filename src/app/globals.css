@@ -9,36 +9,55 @@
    component ships from firing off the user's OS color-scheme setting. */
 @custom-variant dark (&:is(.dark *));
 
-/* AGV Home design tokens (Phase 19 whole-app reskin) — warm green/cream
- * identity, matching a supplied reference composition exactly (recolored
- * from the reference's lime to sage/forest green). Single fixed identity:
- * Phase 19 also removed the user-facing display-settings panel (theme +
- * text-size toggles), so there's no second palette or scale to support —
- * these are just the app's colors, not a "light theme" among several.
+/* AGV Home design tokens — reskinned to match artea-green-glow (the user's
+ * own reference repo, see docs/superpowers/plans/2026-08-07-artea-green-
+ * glow-reskin.md). Token NAMES are unchanged from the previous glass/Forest-
+ * Signal identity on purpose — they were already role-based abstractions
+ * (void = page surface, pine = card surface, bone = primary text, ash =
+ * secondary text, signal = interactive accent, contour = resolved,
+ * amber = active) — so every existing bg-void/text-bone/text-signal/etc.
+ * usage across the app picks up the new palette without touching each
+ * call site. Values below are the reference's oklch palette converted to
+ * hex (this codebase's existing convention — see the old comment this
+ * replaces), not the reference's literal --primary/--foreground names.
  *
- * Read the names as ROLES, not literal colors:
- *   void = page surface · pine = panel/card surface · bone = primary text
- *   ash  = secondary text/borders · signal = interactive accent
- *   contour = resolved/positive · amber = active/in-progress
- *   rail = the fixed dark-green surface used for the circular brand mark,
- *   the login card's backdrop, and the Home hero's glass card cluster.
+ * Genuine identity changes from the previous pass, not just recolors:
+ *  - Flat, bordered cards, no glassmorphism — .glass below is redefined to
+ *    match rather than removed from the ~40 call sites that use it (see
+ *    the .glass rule's own comment).
+ *  - Outfit for everything, not a 3-font system — the reference loads only
+ *    Outfit; --font-sans now points at it too. font-mono usages (reference
+ *    numbers) fall back to the system monospace stack, matching the
+ *    reference's own plain `font-mono` Tailwind utility (no custom mono
+ *    webfont there either).
+ *  - A real destructive red exists now (the reference uses one for delete/
+ *    revoke hover states) — the previous "no dedicated red, reuse amber"
+ *    rule from DESIGN.md's One Accent Rule is superseded by this pass for
+ *    destructive actions specifically; amber still marks in-progress status
+ *    and signal is still the only accent used for non-destructive
+ *    interactive emphasis.
+ *  - Tighter corner radius (flatter, more squared) than the previous
+ *    generously-rounded system.
  */
 @theme {
-  --color-void: #f1f3f1; /* cool off-white/gray — page surface */
+  --color-void: #fcfcfa; /* warm near-white — page surface */
   --color-pine: #ffffff; /* white — panel/card surface */
-  --color-bone: #1e2a1f; /* ink — primary text */
-  --color-ash: #686e61; /* secondary text/borders */
-  --color-signal: #2f7040;
-  --color-contour: #3f7652;
-  --color-amber: #8a5a17;
+  --color-bone: #22291f; /* dark ink — primary text */
+  --color-ash: #767c76; /* secondary text/borders */
+  --color-signal: #3c6b45; /* brand green — the only non-destructive accent */
+  --color-signal-deep: #2b4a30; /* darker brand green — hovers, deep accents */
+  --color-signal-light: #7fae82; /* lighter brand green — subtle emphasis */
+  --color-contour: #3c6b45; /* resolved/positive — same green family as signal */
+  --color-amber: #8a6a1e; /* active/in-progress */
+  --color-destructive: #c0392b; /* real red — destructive actions only */
 
   --color-rail: #1b3a2b;
   --color-rail-ink: #f0ede2;
   --color-rail-muted: #9db6a4;
 
   --font-display: var(--font-outfit), "Outfit", sans-serif;
-  --font-sans: var(--font-inter), "Inter", sans-serif;
-  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  --font-sans: var(--font-outfit), "Outfit", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
 
   /* Type-size floor. 0.75rem is the smallest step already in the type scale
      (Tailwind's text-xs), so it's the system's own minimum rather than an
@@ -47,27 +66,30 @@
   --text-label: 0.75rem;
   --text-label--line-height: 1.35;
 
-  --pulse-rgb: 138 90 23;
-  --shadow-panel: 0 18px 44px -22px rgb(30 42 31 / 0.18);
-  --shadow-pop: 0 14px 34px -12px rgb(30 42 31 / 0.2);
-  --glass-bg: rgb(255 255 255 / 0.6);
-  --glass-border: rgb(255 255 255 / 0.7);
+  --pulse-rgb: 138 106 30;
+  --shadow-panel: 0 1px 2px rgb(20 40 25 / 0.04);
+  --shadow-pop: 0 8px 20px -8px rgb(20 40 25 / 0.12);
+  --glass-bg: var(--color-pine);
+  --glass-border: color-mix(in oklab, var(--color-ash) 25%, transparent);
 }
 
 html {
   color-scheme: light;
 }
 
-/* Frosted-glass surface: use over photography or gradients, not over plain
-   body background (redundant blur there, no visual payoff).
-   Blur itself comes from Tailwind's backdrop-blur-* utility on the element
-   (pair it in markup, e.g. class="glass backdrop-blur-xl") — a hand-written
-   backdrop-filter declaration here gets silently stripped by this project's
-   CSS build (Lightning CSS via @tailwindcss/postcss), confirmed by
-   inspecting the compiled stylesheet; Tailwind's own utility survives. */
+/* Flat bordered card — the reskin's replacement for the old frosted-glass
+   surface. Kept the .glass CLASS NAME rather than renaming it: ~40 call
+   sites across the app pair it with Tailwind's backdrop-blur-* utility in
+   their className (e.g. class="glass rounded-2xl backdrop-blur-xl"), and
+   redefining the class here — including neutralizing that blur utility —
+   reskins every one of them without touching each file. Genuinely renaming
+   it to something like .panel is Phase 3+'s job, done surface by surface
+   alongside the rest of that page's markup, not a blanket rename now. */
 .glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: none !important;
 }
 
 /* Fixed dark glass, light text — for cards floating over a photo/gradient
@@ -82,16 +104,12 @@ html {
   color: rgb(240 237 226 / 0.72);
 }
 
-/* A soft, fixed-position gradient wash under the flat page color — glass
-   panels (.glass, .login-card) need *something* with texture to blur
-   against; blurring flat --color-void is visually a no-op. Subtle by
-   design: this is a wash, not a hero background. */
+/* Flat body background, matching the reference exactly — the previous
+   gradient wash existed only so glass panels had texture to blur against
+   (see .glass's own comment); now that .glass is flat, the wash has no
+   remaining purpose and the reference's own background is genuinely flat. */
 body {
-  background:
-    radial-gradient(120% 70% at 12% -10%, rgb(47 112 64 / 0.12), transparent 60%),
-    radial-gradient(100% 60% at 100% 0%, rgb(63 118 82 / 0.1), transparent 55%),
-    var(--color-void);
-  background-attachment: fixed;
+  background: var(--color-void);
   color: var(--color-bone);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -161,8 +179,50 @@ body {
   animation: step-pulse 2.4s ease-out infinite;
 }
 
+/* Ported from artea-green-glow (docs/superpowers/plans/2026-08-07-artea-
+   green-glow-reskin.md) for the Home landing page: the small-caps section
+   label above every landing headline, and the hero/press-strip entrance
+   animations. Uses --text-label, the same size floor every uppercase label
+   elsewhere in the app already uses, rather than a new arbitrary size. */
+@utility eyebrow {
+  font-size: var(--text-label);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+@keyframes agv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation: agv-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes agv-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@utility animate-marquee {
+  animation: agv-marquee 38s linear infinite;
+}
+
 /* Motion: OS-level prefers-reduced-motion only (Phase 19 removed the manual
-   override UI along with the rest of display settings). */
+   override UI along with the rest of display settings). Also covers the two
+   utilities just above — both are @media (prefers-reduced-motion) targets
+   via the "*" rule below (animation-duration), not repeated here. */
 @media (prefers-reduced-motion: reduce) {
   .step-pulse {
     animation: none;
@@ -225,12 +285,12 @@ body {
   --muted-foreground: var(--color-ash);
   --accent: color-mix(in oklab, var(--color-signal) 12%, var(--color-void));
   --accent-foreground: var(--color-bone);
-  --destructive: var(--color-amber);
+  --destructive: var(--color-destructive);
   --destructive-foreground: var(--color-void);
-  --border: var(--color-ash);
-  --input: var(--color-ash);
+  --border: color-mix(in oklab, var(--color-ash) 30%, var(--color-void));
+  --input: color-mix(in oklab, var(--color-ash) 30%, var(--color-void));
   --ring: var(--color-signal);
-  --radius: 0.625rem;
+  --radius: 0.25rem;
 }
 
 @layer base {
