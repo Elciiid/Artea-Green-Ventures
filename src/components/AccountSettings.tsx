@@ -24,36 +24,48 @@ import {
 import { formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function AccountSettings() {
   const account = useSession((s) => s.account);
   if (!account) return null; // AppShell guarantees this, but keep types honest
 
   return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-bone">Account</h1>
-        <p className="mt-2 text-sm text-ash">
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+      <div className="shrink-0">
+        <p className="eyebrow text-signal">Your account</p>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight text-bone sm:text-5xl">
+          Account
+        </h1>
+        <p className="mt-4 max-w-2xl text-sm font-light leading-relaxed text-ash">
           Manage how you sign in.
         </p>
-        <dl className="mt-5 grid gap-3 border-t border-ash/15 pt-5 sm:grid-cols-2">
-          <div>
-            <dt className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
-              Signed in as
-            </dt>
-            <dd className="mt-1 font-mono text-sm text-bone">{account.email}</dd>
-          </div>
-          <div>
-            <dt className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
-              Role
-            </dt>
-            <dd className="mt-1 text-sm capitalize text-bone">{account.role}</dd>
-          </div>
-        </dl>
       </div>
 
-      <PasswordSection email={account.email} />
-      <MfaSection account={account} />
+      <div className="mt-9 space-y-6">
+        <section className="rounded-sm border border-ash/20 bg-pine p-6 shadow-panel sm:p-7">
+          <div className="flex items-center gap-4">
+            <span
+              aria-hidden
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-signal/15 text-lg font-semibold text-signal"
+            >
+              {account.name.charAt(0).toUpperCase()}
+            </span>
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-bone">
+                {account.name}
+                <span className="rounded-full border border-ash/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-ash">
+                  {account.role}
+                </span>
+              </p>
+              <p className="mt-1 font-mono text-xs text-ash">{account.email}</p>
+            </div>
+          </div>
+        </section>
+
+        <PasswordSection email={account.email} />
+        <MfaSection account={account} />
+      </div>
     </div>
   );
 }
@@ -146,11 +158,11 @@ function PasswordSection({ email }: { email: string }) {
   }
 
   return (
-    <section aria-labelledby="pw-heading" className="rounded-xl border border-ash/15 bg-pine/40 p-6 sm:p-7">
-      <h2 id="pw-heading" className="font-display text-lg font-bold text-bone">
+    <section aria-labelledby="pw-heading" className="rounded-sm border border-ash/20 bg-pine p-6 shadow-panel sm:p-7">
+      <h2 id="pw-heading" className="eyebrow text-ash">
         Password
       </h2>
-      <p className="mt-1.5 text-sm text-ash">
+      <p className="mt-1 text-xs font-light text-ash">
         Change the password you use to sign in.
       </p>
 
@@ -192,13 +204,13 @@ function PasswordSection({ email }: { email: string }) {
             {error}
           </p>
         )}
-        <button
+        <Button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-signal px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 active:translate-y-px disabled:opacity-60"
+          className="h-auto rounded-full bg-signal px-5 py-2.5 text-sm font-semibold text-void hover:bg-signal hover:brightness-110"
         >
           {busy ? "Updating…" : "Update password"}
-        </button>
+        </Button>
       </form>
     </section>
   );
@@ -351,16 +363,16 @@ function MfaSection({ account }: { account: Account }) {
   }
 
   return (
-    <section aria-labelledby="mfa-heading" className="rounded-xl border border-ash/15 bg-pine/40 p-6 sm:p-7">
-      <h2 id="mfa-heading" className="font-display text-lg font-bold text-bone">
+    <section aria-labelledby="mfa-heading" className="rounded-sm border border-ash/20 bg-pine p-6 shadow-panel sm:p-7">
+      <h2 id="mfa-heading" className="eyebrow text-ash">
         Two-step verification
       </h2>
-      <p className="mt-1.5 text-sm text-ash">
+      <p className="mt-1 text-xs font-light text-ash">
         Add an authenticator app for a one-time code at sign-in. Optional.
       </p>
 
       {excluded ? (
-        <p className="mt-5 rounded-lg border border-ash/20 bg-void/40 px-4 py-3 text-sm text-ash">
+        <p className="mt-5 rounded-sm border border-ash/20 bg-void/40 px-4 py-3 text-sm text-ash">
           Two-step verification is off for the shared demo accounts. Sign in
           with a real account to set it up.
         </p>
@@ -376,7 +388,7 @@ function MfaSection({ account }: { account: Account }) {
               {factors.map((f) => (
                 <li
                   key={f.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-ash/15 bg-void/40 px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-sm border border-ash/15 bg-void/30 px-4 py-3"
                 >
                   <span>
                     <span className="block text-sm text-bone">
@@ -390,7 +402,7 @@ function MfaSection({ account }: { account: Account }) {
                     type="button"
                     onClick={() => remove(f.id)}
                     disabled={busy}
-                    className="text-label font-semibold uppercase tracking-[0.12em] text-ash transition hover:text-amber disabled:opacity-50"
+                    className="text-xs font-light text-ash transition hover:text-destructive disabled:opacity-50"
                   >
                     Remove
                   </button>
@@ -401,7 +413,7 @@ function MfaSection({ account }: { account: Account }) {
 
           {/* enrollment flow */}
           {pending ? (
-            <form onSubmit={verify} className="rounded-lg border border-ash/15 bg-void/40 p-4 sm:p-5">
+            <form onSubmit={verify} className="rounded-sm border border-ash/15 bg-void/30 p-4 sm:p-5">
               <p className="text-sm text-bone">
                 Scan this with your authenticator app, then enter the 6-digit
                 code it shows.
@@ -456,18 +468,18 @@ function MfaSection({ account }: { account: Account }) {
               )}
 
               <div className="mt-4 flex items-center gap-3">
-                <button
+                <Button
                   type="submit"
                   disabled={busy || code.length !== 6}
-                  className="rounded-md bg-signal px-5 py-2.5 font-display text-sm font-bold uppercase tracking-[0.1em] text-void transition hover:brightness-110 active:translate-y-px disabled:opacity-50"
+                  className="h-auto rounded-full bg-signal px-5 py-2.5 text-sm font-semibold text-void hover:bg-signal hover:brightness-110"
                 >
                   {busy ? "Verifying…" : "Verify & turn on"}
-                </button>
+                </Button>
                 <button
                   type="button"
                   onClick={cancelEnroll}
                   disabled={busy}
-                  className="text-label font-semibold uppercase tracking-[0.12em] text-ash transition hover:text-bone disabled:opacity-50"
+                  className="text-xs font-light text-ash transition hover:text-bone disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -480,18 +492,19 @@ function MfaSection({ account }: { account: Account }) {
                   {error}
                 </p>
               )}
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={startEnroll}
                 disabled={busy}
-                className="rounded-md border border-ash/30 px-5 py-2.5 text-sm font-semibold text-bone transition hover:border-signal/60 hover:text-signal disabled:opacity-50"
+                className="h-auto rounded-full border-ash/30 bg-transparent px-5 py-2.5 text-sm font-semibold text-bone hover:border-signal/60 hover:bg-transparent hover:text-signal"
               >
                 {busy
                   ? "Working…"
                   : factors.length > 0
                     ? "Add another authenticator app"
                     : "Add authenticator app"}
-              </button>
+              </Button>
             </div>
           )}
         </div>

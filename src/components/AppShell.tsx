@@ -287,9 +287,11 @@ export default function AppShell({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="glass w-60">
                 <DropdownMenuLabel className="px-3 py-2 font-normal">
-                  <p className="text-sm font-medium text-bone">{account.name}</p>
-                  <p className="mt-1 inline-block rounded-full border border-ash/30 px-2 py-0.5 text-label uppercase tracking-[0.12em] text-ash">
-                    {account.role}
+                  <p className="flex items-center gap-2 text-sm font-medium text-bone">
+                    {account.name}
+                    <span className="rounded-full border border-ash/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-ash">
+                      {account.role}
+                    </span>
                   </p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
