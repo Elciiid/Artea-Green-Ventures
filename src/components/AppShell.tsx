@@ -326,8 +326,8 @@ export default function AppShell({
         className={
           fullBleed
             ? "relative z-10 flex w-full flex-1 flex-col"
-            : `relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 sm:px-8 ${
-                boundedContent ? "py-6" : "py-12"
+            : `relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pt-12 sm:px-8 ${
+                boundedContent ? "pb-6" : "pb-12"
               } ${boundedContent ? "min-h-0" : ""}`
         }
       >
