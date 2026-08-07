@@ -39,20 +39,29 @@
  *  - Tighter corner radius (flatter, more squared) than the previous
  *    generously-rounded system.
  */
+/* Exact oklch→sRGB conversions of the reference's own token values (its
+ * CSS requires oklch(); this codebase's own convention is hex — see the
+ * comment above), not hand-picked approximations. Computed directly from
+ * artea-green-glow's styles.css :root block via the standard OKLab→linear-
+ * sRGB matrices, not eyeballed — a first pass at this palette used
+ * approximate hex and was visibly off (most noticeably --color-rail,
+ * where the reference's "ink" is oklch(0.17 0.02 155) — a near-black with
+ * a faint green cast, not the mid-tone forest green the approximation
+ * used). */
 @theme {
-  --color-void: #fcfcfa; /* warm near-white — page surface */
+  --color-void: #fcfbf8; /* oklch(0.988 0.004 90) — page surface */
   --color-pine: #ffffff; /* white — panel/card surface */
-  --color-bone: #22291f; /* dark ink — primary text */
-  --color-ash: #767c76; /* secondary text/borders */
-  --color-signal: #3c6b45; /* brand green — the only non-destructive accent */
-  --color-signal-deep: #2b4a30; /* darker brand green — hovers, deep accents */
-  --color-signal-light: #7fae82; /* lighter brand green — subtle emphasis */
-  --color-contour: #3c6b45; /* resolved/positive — same green family as signal */
-  --color-amber: #8a6a1e; /* active/in-progress */
-  --color-destructive: #c0392b; /* real red — destructive actions only */
+  --color-bone: #141d16; /* oklch(0.22 0.02 150) — primary text */
+  --color-ash: #616c63; /* oklch(0.52 0.02 150) — secondary text/borders */
+  --color-signal: #2f6a3f; /* oklch(0.474 0.093 150.5) — the only non-destructive accent */
+  --color-signal-deep: #13331d; /* oklch(0.29 0.055 152) */
+  --color-signal-light: #81b482; /* oklch(0.72 0.09 145) */
+  --color-contour: #2f6a3f; /* resolved/positive — same green family as signal */
+  --color-amber: #8a6a1e; /* active/in-progress — no reference equivalent, kept from the first pass */
+  --color-destructive: #e7000b; /* oklch(0.577 0.245 27.325) */
 
-  --color-rail: #1b3a2b;
-  --color-rail-ink: #f0ede2;
+  --color-rail: #08120c; /* oklch(0.17 0.02 155) — near-black, not forest green */
+  --color-rail-ink: #f4f6f0; /* oklch(0.97 0.008 120) */
   --color-rail-muted: #9db6a4;
 
   --font-display: var(--font-outfit), "Outfit", sans-serif;
@@ -287,8 +296,8 @@ body {
   --accent-foreground: var(--color-bone);
   --destructive: var(--color-destructive);
   --destructive-foreground: var(--color-void);
-  --border: color-mix(in oklab, var(--color-ash) 30%, var(--color-void));
-  --input: color-mix(in oklab, var(--color-ash) 30%, var(--color-void));
+  --border: #dae0d9; /* oklch(0.9 0.012 140), the reference's own --border */
+  --input: #dae0d9;
   --ring: var(--color-signal);
   --radius: 0.25rem;
 }

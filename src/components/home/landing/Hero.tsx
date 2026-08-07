@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import hero from "../../../../public/images/site/whtbl-hero-1155x360_edited.jpg";
+import hero from "../../../../public/images/site/thumbnail_IMG_2190.jpg";
 
 // Ported from artea-green-glow's Hero (docs/superpowers/plans/2026-08-07-
 // artea-green-glow-reskin.md). "stats" are placeholder figures the
@@ -17,7 +17,7 @@ export default function Hero() {
     <section className="relative isolate min-h-[92vh] overflow-hidden bg-rail text-rail-ink">
       <Image
         src={hero}
-        alt="Aerial view of Sydney Harbour Bridge at golden hour"
+        alt="Sunlit parkland on an Artea Green Ventures project site"
         fill
         priority
         sizes="100vw"
@@ -39,16 +39,16 @@ export default function Hero() {
 
         <div className="animate-rise mt-10 flex flex-wrap items-center gap-4">
           <Link
-            href="#workspace"
-            className="rounded-full bg-signal px-7 py-3.5 text-sm font-medium text-void transition-colors hover:bg-signal-light hover:text-rail"
+            href="#applications"
+            className="rounded-full bg-rail-ink px-7 py-3.5 text-sm font-medium text-rail transition-colors hover:bg-signal-light"
           >
-            Explore the portal
+            Browse applications
           </Link>
           <Link
-            href="/dashboard"
+            href="#workspace"
             className="rounded-full border border-rail-ink/35 px-7 py-3.5 text-sm font-light text-rail-ink transition-colors hover:border-rail-ink"
           >
-            Go to Dashboard
+            Explore the portal
           </Link>
         </div>
 

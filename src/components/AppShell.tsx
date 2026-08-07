@@ -105,6 +105,8 @@ export default function AppShell({
   requireCompanyManager = false,
   boundedContent = false,
   fullBleed = false,
+  heroHeader = false,
+  hideFooter = false,
   children,
 }: {
   expect?: Role | Role[];
@@ -132,6 +134,20 @@ export default function AppShell({
    * becomes responsible for every section's own container/padding, same as
    * the reference's index.tsx not using its shared PortalShell at all. */
   fullBleed?: boolean;
+  /** Floats the header transparently over the page's own content instead of
+   * the normal sticky opaque bar — matches the reference's SiteHeader,
+   * which is `absolute`, not `sticky`, and genuinely scrolls out of view
+   * past the hero (no persistent nav below it, same as the reference).
+   * Home (/home) is the only page that uses this: it's the one surface this
+   * reskin treats as the reference's public marketing page, not another
+   * operational surface — every other page keeps the normal persistent nav.
+   * Requires fullBleed (a light-on-dark header only makes sense sitting
+   * directly on a full-bleed hero image, not a padded content column). */
+  heroHeader?: boolean;
+  /** Skips AppShell's own simple footer — Home supplies the reference's
+   * richer three-column SiteFooter itself (see HomeLanding.tsx), which
+   * doesn't fit the plain one-liner every other page uses. */
+  hideFooter?: boolean;
   children: React.ReactNode;
 }) {
   const account = useSession((s) => s.account);
@@ -206,7 +222,13 @@ export default function AppShell({
     <div
       className={`relative flex flex-col ${boundedContent ? "h-full overflow-hidden" : "min-h-full"}`}
     >
-      <header className="sticky top-0 z-40 shrink-0 border-b border-ash/15 bg-void/85 backdrop-blur">
+      <header
+        className={
+          heroHeader
+            ? "absolute inset-x-0 top-0 z-30 shrink-0"
+            : "sticky top-0 z-40 shrink-0 border-b border-ash/15 bg-void/85 backdrop-blur"
+        }
+      >
         {/* A plain 3-child justify-between flex only looks centered when the
             two flanking groups happen to be equal width — they aren't here
             (logo+Menu button on the left vs. name badge+avatar on the right,
@@ -220,10 +242,12 @@ export default function AppShell({
             block would slide into column 2 instead of staying in column 3.
             Verified via computed grid-template-columns + child rects at
             768/1024/1440px. */}
-        <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6">
+        <div
+          className={`mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-5 sm:px-6 ${heroHeader ? "lg:px-10" : ""}`}
+        >
           <div className="col-start-1 flex items-center gap-3">
             <Link href={roleHome(account.role)} className="flex shrink-0 items-center">
-              <Wordmark />
+              <Wordmark variant={heroHeader ? "white" : "green"} />
             </Link>
 
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -231,7 +255,11 @@ export default function AppShell({
                 <button
                   type="button"
                   aria-label="Toggle navigation menu"
-                  className="ml-1 inline-flex items-center gap-2 rounded-full border border-ash/25 px-3.5 py-1.5 text-sm text-ash transition hover:border-signal/50 hover:text-bone lg:hidden"
+                  className={`ml-1 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition lg:hidden ${
+                    heroHeader
+                      ? "border-rail-ink/35 text-rail-ink hover:border-rail-ink"
+                      : "border-ash/25 text-ash hover:border-signal/50 hover:text-bone"
+                  }`}
                 >
                   <svg aria-hidden width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
                     <path d="M2 4.5h14M2 9h14M2 13.5h14" />
@@ -258,24 +286,36 @@ export default function AppShell({
           {/* center nav — plain text links, desktop only */}
           <nav aria-label="Primary" className="col-start-2 hidden items-center gap-7 lg:flex">
             {nav.map((item) => (
-              <PillLink key={item.href} item={item} active={item.match(pathname)} />
+              <PillLink key={item.href} item={item} active={item.match(pathname)} light={heroHeader} />
             ))}
           </nav>
 
           <div className="col-start-3 flex items-center justify-end gap-2.5">
-            <span className="hidden rounded-full bg-rail px-3.5 py-1.5 text-sm font-semibold text-rail-ink sm:inline-block">
-              {account.name}
-            </span>
+            {!heroHeader && (
+              <span className="hidden rounded-full bg-rail px-3.5 py-1.5 text-sm font-semibold text-rail-ink sm:inline-block">
+                {account.name}
+              </span>
+            )}
 
             <DropdownMenu open={accountMenuOpen} onOpenChange={setAccountMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={`Account menu for ${account.name}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-ash/25 text-sm font-bold text-bone transition hover:border-signal/50"
-                >
-                  {account.name.charAt(0)}
-                </button>
+                {heroHeader ? (
+                  <button
+                    type="button"
+                    aria-label={`Account menu for ${account.name}`}
+                    className="rounded-full border border-rail-ink/35 px-5 py-2 text-sm font-light text-rail-ink backdrop-blur-sm transition-colors hover:bg-rail-ink hover:text-rail"
+                  >
+                    {account.name}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`Account menu for ${account.name}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-ash/25 text-sm font-bold text-bone transition hover:border-signal/50"
+                  >
+                    {account.name.charAt(0)}
+                  </button>
+                )}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="glass w-60">
                 <DropdownMenuLabel className="px-3 py-2 font-normal">
@@ -324,25 +364,27 @@ export default function AppShell({
         {children}
       </main>
 
-      <footer className="relative z-10 shrink-0 border-t border-ash/15">
-        <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-          <div className="flex flex-col gap-2 text-xs font-light text-ash sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-medium text-bone">Artea Green Ventures</p>
-              <p>Environmental compliance · Australia &amp; the Philippines</p>
-            </div>
-            <div className="sm:text-right">
-              {/* gated on showDevTools() for consistency with the login
-                  "Demo build" chip — the "illustrative, not official" notice
-                  must not linger over real records in production */}
-              {showDevTools() && (
-                <p>Demo environment · records shown are illustrative, not official.</p>
-              )}
-              <p>© 2026 Artea Green Ventures</p>
+      {!hideFooter && (
+        <footer className="relative z-10 shrink-0 border-t border-ash/15">
+          <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+            <div className="flex flex-col gap-2 text-xs font-light text-ash sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium text-bone">Artea Green Ventures</p>
+                <p>Environmental compliance · Australia &amp; the Philippines</p>
+              </div>
+              <div className="sm:text-right">
+                {/* gated on showDevTools() for consistency with the login
+                    "Demo build" chip — the "illustrative, not official" notice
+                    must not linger over real records in production */}
+                {showDevTools() && (
+                  <p>Demo environment · records shown are illustrative, not official.</p>
+                )}
+                <p>© 2026 Artea Green Ventures</p>
+              </div>
             </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
@@ -361,13 +403,29 @@ function MenuNavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function PillLink({ item, active }: { item: NavItem; active: boolean }) {
+function PillLink({
+  item,
+  active,
+  light = false,
+}: {
+  item: NavItem;
+  active: boolean;
+  /** For heroHeader mode — light text over a dark hero image instead of
+   * dark text over the normal light header. */
+  light?: boolean;
+}) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={`text-sm transition-colors ${
-        active ? "font-medium text-signal" : "font-light text-ash hover:text-bone"
+        light
+          ? active
+            ? "font-medium text-rail-ink"
+            : "font-light text-rail-ink/85 hover:text-rail-ink"
+          : active
+            ? "font-medium text-signal"
+            : "font-light text-ash hover:text-bone"
       }`}
     >
       {item.label}

@@ -36,7 +36,7 @@ export default function WorkspaceSection() {
           </h2>
         </div>
 
-        <div className="mt-14 grid gap-8 md:grid-cols-3">
+        <div id="applications" className="mt-14 grid gap-8 md:grid-cols-3">
           {cards.map((card) => (
             <article
               key={card.title}
