@@ -285,7 +285,7 @@ export default function AppShell({
                   </button>
                 )}
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass w-60">
+              <DropdownMenuContent align="end" className="glass w-auto min-w-48">
                 <DropdownMenuLabel className="px-3 py-2 font-normal">
                   <p className="flex items-center gap-2 text-sm font-medium text-bone">
                     {account.name}
