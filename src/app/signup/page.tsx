@@ -13,8 +13,9 @@
 // returns (setSession), since the actual account creation happened
 // server-side, then redirects based on the role the route resolved.
 //
-// Shares the login page's exact visual language (same glass card, inputs,
-// button) rather than inventing a second sign-up-flow identity.
+// Shares the login page's exact visual language (same flat bordered-panel
+// card, inputs, button) rather than inventing a second sign-up-flow
+// identity.
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -24,6 +25,8 @@ import { useReducedMotionPref } from "@/lib/preferences";
 import { Wordmark } from "@/components/Logo";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { roleHome, useSession } from "@/lib/session";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -129,12 +132,10 @@ export default function SignUpPage() {
           initial={reduced ? false : { opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: EASE }}
-          className="glass w-full max-w-md rounded-3xl p-7 text-bone backdrop-blur-2xl sm:p-9"
+          className="w-full max-w-md rounded-sm border border-ash/20 bg-pine p-7 text-bone shadow-panel sm:p-9"
         >
-          <p className="text-label font-semibold uppercase tracking-[0.18em] text-signal">
-            Artea Green Ventures Home
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold">Create an account</h1>
+          <p className="eyebrow text-signal">Artea Green Ventures Home</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Create an account</h1>
           <p className="mt-2 text-sm leading-relaxed text-ash">
             AGV team? Use your @arteagreenventures.com email — we&apos;ll send
             a quick verification link. Client of ours? Use your own work
@@ -142,7 +143,7 @@ export default function SignUpPage() {
           </p>
 
           {pendingConfirmation ? (
-            <div className="mt-6 rounded-xl border border-ash/20 bg-pine/40 px-4 py-4 text-sm text-bone">
+            <div className="mt-6 rounded-sm border border-ash/20 bg-void/40 px-4 py-4 text-sm text-bone">
               <p className="font-semibold">Check your email to confirm your account.</p>
               <p className="mt-1.5 text-ash">
                 We sent a confirmation link to <span className="text-bone">{email}</span>.
@@ -161,7 +162,7 @@ export default function SignUpPage() {
                 <label htmlFor="name" className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
                   Name
                 </label>
-                <input
+                <Input
                   id="name"
                   type="text"
                   autoComplete="name"
@@ -173,14 +174,14 @@ export default function SignUpPage() {
                   placeholder="Your name"
                   aria-invalid={Boolean(error)}
                   aria-describedby={error ? "signup-error" : undefined}
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 h-auto border-ash/20 bg-void/40 px-3.5 py-2.5 text-sm text-bone focus-visible:border-signal focus-visible:ring-signal/40"
                 />
               </div>
               <div>
                 <label htmlFor="email" className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
                   Email
                 </label>
-                <input
+                <Input
                   id="email"
                   type="email"
                   autoComplete="email"
@@ -192,14 +193,14 @@ export default function SignUpPage() {
                   placeholder="you@arteagreenventures.com"
                   aria-invalid={Boolean(error)}
                   aria-describedby={error ? "signup-error" : undefined}
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 h-auto border-ash/20 bg-void/40 px-3.5 py-2.5 text-sm text-bone focus-visible:border-signal focus-visible:ring-signal/40"
                 />
               </div>
               <div>
                 <label htmlFor="password" className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
                   Password
                 </label>
-                <input
+                <Input
                   id="password"
                   type="password"
                   autoComplete="new-password"
@@ -211,14 +212,14 @@ export default function SignUpPage() {
                   placeholder="At least 8 characters"
                   aria-invalid={Boolean(error)}
                   aria-describedby={error ? "signup-error" : undefined}
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 h-auto border-ash/20 bg-void/40 px-3.5 py-2.5 text-sm text-bone focus-visible:border-signal focus-visible:ring-signal/40"
                 />
               </div>
               <div>
                 <label htmlFor="confirm" className="text-label font-semibold uppercase tracking-[0.14em] text-ash">
                   Confirm password
                 </label>
-                <input
+                <Input
                   id="confirm"
                   type="password"
                   autoComplete="new-password"
@@ -229,7 +230,7 @@ export default function SignUpPage() {
                   }}
                   aria-invalid={Boolean(error)}
                   aria-describedby={error ? "signup-error" : undefined}
-                  className="mt-1.5 w-full rounded-xl border border-ash/20 bg-pine/50 px-3.5 py-2.5 text-sm text-bone outline-none transition placeholder:text-ash focus:border-signal focus:ring-1 focus:ring-signal/40"
+                  className="mt-1.5 h-auto border-ash/20 bg-void/40 px-3.5 py-2.5 text-sm text-bone focus-visible:border-signal focus-visible:ring-signal/40"
                 />
               </div>
 
@@ -239,13 +240,13 @@ export default function SignUpPage() {
                 </p>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-full bg-signal py-3 text-sm font-semibold text-void transition hover:brightness-110 active:translate-y-px disabled:opacity-60"
+                className="h-auto w-full rounded-full bg-signal py-3 text-sm font-semibold text-void hover:bg-signal hover:brightness-110"
               >
                 {busy ? "Creating account…" : "Create account"}
-              </button>
+              </Button>
             </form>
           )}
 
@@ -257,15 +258,16 @@ export default function SignUpPage() {
                 <div className="h-px flex-1 bg-ash/20" />
               </div>
 
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={onMicrosoft}
                 disabled={oauthBusy}
-                className="mt-5 flex w-full items-center justify-center gap-2.5 rounded-full border border-ash/20 bg-pine/50 py-3 text-sm font-semibold text-bone transition hover:bg-pine/70 active:translate-y-px disabled:opacity-60"
+                className="mt-5 h-auto w-full gap-2.5 rounded-full border-ash/20 bg-void/40 py-3 text-sm font-semibold text-bone hover:bg-void/70"
               >
                 <MicrosoftIcon />
                 {oauthBusy ? "Redirecting…" : "Continue with Microsoft"}
-              </button>
+              </Button>
             </>
           )}
         </motion.div>
