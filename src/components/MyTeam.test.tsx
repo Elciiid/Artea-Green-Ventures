@@ -59,11 +59,10 @@ function renderMyTeam() {
   );
 }
 
-async function openRowAndGetCheckbox(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = await screen.findByRole("button", {
-    name: new RegExp(`^${teammate.name}, \\d+ of 1 applications$`),
-  });
-  await user.click(trigger);
+// Table layout (docs/superpowers/plans/2026-08-07-artea-green-glow-reskin.md,
+// same table AccessMatrix.tsx uses): every teammate's row and its
+// per-application checkboxes render directly, no expand step.
+function getCheckbox() {
   return screen.findByRole("checkbox", {
     name: new RegExp(`${teammate.name}'s access to ${app.title}$`),
   });
@@ -86,7 +85,7 @@ describe("MyTeam", () => {
     mockGrantAccess.mockResolvedValue(undefined);
 
     renderMyTeam();
-    const checkbox = await openRowAndGetCheckbox(user);
+    const checkbox = await getCheckbox();
     expect(checkbox).toHaveAttribute("aria-checked", "false");
 
     await user.click(checkbox);
@@ -105,7 +104,7 @@ describe("MyTeam", () => {
     mockRevokeAccess.mockResolvedValue(undefined);
 
     renderMyTeam();
-    const checkbox = await openRowAndGetCheckbox(user);
+    const checkbox = await getCheckbox();
     expect(checkbox).toHaveAttribute("aria-checked", "true");
 
     await user.click(checkbox);
@@ -123,14 +122,14 @@ describe("MyTeam", () => {
     mockRevokeAccess.mockRejectedValue(new Error("boom"));
 
     renderMyTeam();
-    const checkbox = await openRowAndGetCheckbox(user);
+    const checkbox = await getCheckbox();
 
     await user.click(checkbox);
 
     const toast = await screen.findByText("Couldn't update access: boom");
     expect(toast).toBeInTheDocument();
     expect(
-      within(checkbox.closest("li")!).getByRole("checkbox")
+      within(checkbox.closest("tr")!).getByRole("checkbox")
     ).toHaveAttribute("aria-checked", "true");
   });
 
@@ -139,7 +138,7 @@ describe("MyTeam", () => {
 
     renderMyTeam();
 
-    await screen.findByRole("button", { name: new RegExp(`^${teammate.name},`) });
+    await screen.findByText(teammate.name);
     expect(screen.queryByText("Someone Else")).not.toBeInTheDocument();
   });
 });
