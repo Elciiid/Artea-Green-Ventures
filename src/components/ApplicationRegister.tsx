@@ -96,7 +96,16 @@ export default function ApplicationRegister({
       {applications.length === 0 ? (
         <div className="mt-10">{emptyState}</div>
       ) : (
-        <div className="glass mt-9 overflow-x-auto rounded-2xl p-2 backdrop-blur-xl">
+        <div className="mt-9 rounded-sm border border-ash/20 bg-pine p-6 shadow-panel">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="eyebrow text-ash">Register</h2>
+              <p className="mt-1 text-xs font-light text-ash">
+                {applications.length} {applications.length === 1 ? "application" : "applications"} on record
+              </p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
           <Table className="min-w-[840px] border-collapse text-left">
             <TableCaption className="sr-only">{title}</TableCaption>
             <TableHeader>
@@ -173,15 +182,11 @@ export default function ApplicationRegister({
               ))}
             </TableBody>
           </Table>
+          </div>
+          <p className="mt-5 text-xs font-light text-ash">
+            Select a reference number to open it.
+          </p>
         </div>
-      )}
-
-      {applications.length > 0 && (
-        <p className="mt-3 text-xs text-ash">
-          {applications.length}{" "}
-          {applications.length === 1 ? "application" : "applications"} · select a
-          reference number to open it
-        </p>
       )}
     </div>
   );
