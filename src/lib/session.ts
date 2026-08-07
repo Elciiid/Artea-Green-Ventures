@@ -201,6 +201,12 @@ type SessionState = {
   /** Redirects the browser to the provider's login — resolves only on failure. */
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  /** Patches the signed-in account's display name in place, once the caller
+   * has already written it to agv_profiles (see profile.ts's updateOwnName)
+   * — avoids a full loadAccount() round-trip just to reflect a value the
+   * caller already knows succeeded, and updates every surface reading
+   * account.name (header, dropdown, this page) immediately. */
+  setAccountName: (name: string) => void;
   _init: () => void;
   _initialized: boolean;
 };
@@ -278,5 +284,9 @@ export const useSession = create<SessionState>((set, get) => ({
     } catch {
       /* not configured — nothing to sign out of */
     }
+  },
+
+  setAccountName: (name) => {
+    set((s) => (s.account ? { account: { ...s.account, name } } : s));
   },
 }));
