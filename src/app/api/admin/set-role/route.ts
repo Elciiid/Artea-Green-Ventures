@@ -121,10 +121,30 @@ export async function POST(request: Request) {
       );
     }
 
+    // company_id/is_company_manager are meaningful only for role === "client"
+    // by construction everywhere else in this app (agv_manager_company_id(),
+    // fetchClientProfiles(), etc. all filter on role = 'client') — but
+    // nothing enforced that invariant here, so moving someone OFF client
+    // left those two columns dangling with their old values. Concretely: a
+    // client-manager promoted to staff kept isCompanyManager: true on their
+    // own session, so AppShell's nav kept showing them a "My Team" link that
+    // led nowhere they could act on (found live, 2026-08-08 — the account's
+    // own admin-facing views, which all filter by role = 'client', silently
+    // stopped listing them as a manager at the same moment, so nothing in
+    // the UI was left to clear it either). Fixed here rather than patched
+    // over in the nav check: clearing it at the one place role actually
+    // changes is the same "close it at the source table" pattern this app's
+    // self-escalation triggers already use for the identical bug class.
+    const update: { role: string; company_id?: null; is_company_manager?: boolean } = { role };
+    if (role !== "client") {
+      update.company_id = null;
+      update.is_company_manager = false;
+    }
+
     const admin = getSupabaseServiceClient();
     const { error: updateError, data: updated } = await admin
       .from("agv_profiles")
-      .update({ role })
+      .update(update)
       .eq("id", profileId)
       .select("id");
     if (updateError) {

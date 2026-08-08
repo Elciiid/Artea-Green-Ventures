@@ -3,13 +3,25 @@ import Link from "next/link";
 import hero from "../../../../public/images/site/thumbnail_IMG_2190.jpg";
 
 // Ported from artea-green-glow's Hero (docs/superpowers/plans/2026-08-07-
-// artea-green-glow-reskin.md). "stats" are placeholder figures the
-// reference itself hardcodes (no real metrics endpoint exists for this) —
-// kept as illustrative copy, same as the reference, not wired to real data.
+// artea-green-glow-reskin.md), whose own "stats" were placeholder figures
+// with no basis in AGV's real numbers — replaced (2026-08-08) with figures
+// checked directly against arteagreenventures.com and AGV's official 2026
+// Company Profile PDF (linked from the site's "Who We Are" page):
+//  - 30: distinct rows in the PDF's "Current AGV Clients in Australia"
+//    table (p.8-9) — named projects, audits and ongoing lead-auditor roles.
+//  - 8: named people across the PDF's Our Team/Our Auditors/Our Consultants
+//    sections (Tungol, Alpaño, David, Macpherson, Edike, Miranda, Isidro,
+//    Said).
+//  - 2023: the firm's founding year, per the PDF's Our Team page ("founded
+//    in March 2023 by Annabelle Serrano Tungol").
+// None of the site's own pages or the PDF publish an aggregate "projects
+// completed" or "carbon reduction %" figure — the previous "150+"/"18"/
+// "42%" values had no source at all and were off by an order of magnitude
+// or more against the real, named client list.
 const stats = [
-  { value: "150+", label: "Projects verified" },
-  { value: "18", label: "Partner organisations" },
-  { value: "42%", label: "Average carbon reduction" },
+  { value: "30", label: "Project & audit engagements" },
+  { value: "8", label: "Team specialists" },
+  { value: "2023", label: "Founded" },
 ];
 
 export default function Hero() {

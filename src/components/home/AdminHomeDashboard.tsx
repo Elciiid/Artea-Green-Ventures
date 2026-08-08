@@ -22,11 +22,17 @@
 //
 // "Recent activity" reads agv_audit_log (admin-only RLS — "audit — admin
 // read", 20260722120000) — real system activity, not the reference's
-// invented copy ("changed their display name" etc., which agv_audit_log's
-// own header comment says isn't backed: no trigger writes agv_profiles
-// changes into this table). describeActivity() below covers exactly what
-// the table actually has: agv_applications/agv_documents/
-// agv_application_access changes.
+// invented copy. describeActivity() below covers agv_applications/
+// agv_documents/agv_application_access (the original four audited tables)
+// plus agv_companies/agv_company_applications/agv_profiles, added
+// 20260808110000 to close the Companies feature's own audit gap — that
+// last one also means role changes (previously unaudited) show up here
+// now too, as a direct side effect of covering agv_profiles generally, not
+// a separate mechanism. fetchAuditLog() (auditLog.ts) has no table_name
+// filter, so any table a trigger writes to shows up here automatically —
+// describeActivity()'s `default` case renders anything not given its own
+// readable copy yet as a generic "did X to a record" line rather than
+// silently dropping it.
 
 import Link from "next/link";
 import { fetchApplications } from "@/lib/supabase/applications";
@@ -109,6 +115,47 @@ function describeActivity(
         headline: `${actorName} ${entry.action === "INSERT" ? "granted" : revoked ? "revoked" : "updated"} application access`,
         detail: "",
       };
+    }
+    case "agv_companies": {
+      const name = typeof row.name === "string" ? row.name : "a company";
+      const verb =
+        entry.action === "INSERT" ? "created" : entry.action === "DELETE" ? "deleted" : "renamed";
+      return { headline: `${actorName} ${verb} a company`, detail: name };
+    }
+    case "agv_company_applications": {
+      const revoked = changes?.new?.revoked_at;
+      return {
+        headline: `${actorName} ${entry.action === "INSERT" ? "granted" : revoked ? "revoked" : "updated"} a company's application scope`,
+        detail: "",
+      };
+    }
+    case "agv_profiles": {
+      const name = typeof row.name === "string" ? row.name : "a profile";
+      const oldRole = changes?.old?.role;
+      const newRole = changes?.new?.role;
+      if (entry.action === "UPDATE" && oldRole && newRole && oldRole !== newRole) {
+        return { headline: `${actorName} changed ${name}'s role`, detail: `${oldRole} → ${newRole}` };
+      }
+      const oldManager = changes?.old?.is_company_manager;
+      const newManager = changes?.new?.is_company_manager;
+      if (entry.action === "UPDATE" && oldManager !== undefined && oldManager !== newManager) {
+        return {
+          headline: `${actorName} ${newManager ? "made" : "removed"} ${name} ${newManager ? "a company manager" : "as a company manager"}`,
+          detail: "",
+        };
+      }
+      const oldCompany = changes?.old?.company_id;
+      const newCompany = changes?.new?.company_id;
+      if (entry.action === "UPDATE" && oldCompany !== newCompany) {
+        return {
+          headline: `${actorName} ${newCompany ? "added" : "removed"} ${name} ${newCompany ? "to" : "from"} a company roster`,
+          detail: "",
+        };
+      }
+      if (entry.action === "INSERT") {
+        return { headline: `${actorName} created a profile`, detail: name };
+      }
+      return { headline: `${actorName} updated a profile`, detail: name };
     }
     default:
       return { headline: `${actorName} ${entry.action.toLowerCase()}d a record`, detail: entry.table_name };

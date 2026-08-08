@@ -32,15 +32,20 @@ export type Account = {
 };
 
 /**
- * Post-login landing. Phase 18 sent admin/staff to the new Home hub while
- * client stayed on /portal ("client gets no Home hub at all"). That decision
- * is reversed here, deliberately, as this task's own explicit requirement:
- * every role now lands on /home. `role` is kept as a parameter (unused) so
- * every existing call site — `roleHome(account.role)` throughout the app —
- * keeps working unchanged; only this function's body needed to change.
+ * Post-login landing / logo destination. Every role used to land on /home
+ * (Phase 18/19). Narrowed again here (2026-08-08), the other direction:
+ * since staff and a plain client no longer have a Dashboard at all (see
+ * Dashboard.tsx), sending them to /home first just adds a click before they
+ * reach the one place they actually work — they land straight on /portal
+ * (Applications) instead. admin and a client who IS their company's manager
+ * still land on /home, since both of those still have a real Dashboard one
+ * click away from there. isCompanyManager is meaningless for role !==
+ * "client" by construction elsewhere in this app (see Account's own doc
+ * comment) — passing it for admin is harmless (the check below only reads
+ * it when role === "client").
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- see comment above
-export function roleHome(role: Role): string {
+export function roleHome(role: Role, isCompanyManager: boolean): string {
+  if (role === "staff" || (role === "client" && !isCompanyManager)) return "/portal";
   return "/home";
 }
 
@@ -68,29 +73,6 @@ export function showDevTools(): boolean {
   return process.env.NEXT_PUBLIC_APP_ENV === "demo";
 }
 
-// ——— dev/staging seed accounts (NOT the production user list) ———
-export const DEV_ACCOUNTS: { email: string; name: string; role: Role }[] = [
-  { email: "admin@agv-demo.com", name: "A. Mercer", role: "admin" },
-  { email: "user1@agv-demo.com", name: "S. Whitfield", role: "staff" },
-  { email: "user2@agv-demo.com", name: "R. Santiago", role: "staff" },
-  { email: "client1@agv-demo.com", name: "N. Reyes", role: "client" },
-];
-
-/**
- * Whether an email belongs to one of the dev/staging seed accounts.
- *
- * Used to EXCLUDE these accounts from MFA enrollment (Phase 10c). This was
- * originally justified by the dev quick-switcher re-authenticating as seed
- * accounts with no way to answer an MFA challenge — that tool is gone now
- * (see the file header comment), so the original justification is weaker
- * than it was. Left unchanged here since removing the exclusion wasn't asked
- * for; worth revisiting deliberately rather than as a side effect of this
- * cleanup. See isSeedAccount() call sites for where this still matters.
- */
-export function isSeedAccount(email: string): boolean {
-  return DEV_ACCOUNTS.some((a) => a.email === email.toLowerCase());
-}
-
 /**
  * True when a Supabase Auth error genuinely means "wrong email or password" —
  * as opposed to a config, network, or server-side failure that would
@@ -105,21 +87,6 @@ export function isInvalidCredentialsError(error: unknown): boolean {
     error !== null &&
     "code" in error &&
     (error as { code?: unknown }).code === "invalid_credentials"
-  );
-}
-
-/**
- * True when a Supabase Auth MFA error genuinely means "the code you entered
- * doesn't match" — as opposed to an expired/already-used challenge, an IP
- * mismatch, rate limiting, or a config/network failure that would otherwise
- * look identical to a caller that only checks `if (error)`.
- */
-export function isMfaVerificationFailedError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "mfa_verification_failed"
   );
 }
 

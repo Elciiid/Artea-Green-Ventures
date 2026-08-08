@@ -44,6 +44,11 @@ export type CompanyApplicationGrant = {
   application_id: string;
 };
 
+/** Same shape as CompanyApplicationGrant, plus which company it belongs to —
+ * for a table-wide view (the Access tab's company matrix) rather than one
+ * company's own detail page. */
+export type CompanyApplicationGrantRow = CompanyApplicationGrant & { company_id: string };
+
 /** Every company, for the list page and for the reassignment-confirm
  * dialog's "currently belongs to <name>" copy. */
 export async function fetchCompanies(): Promise<Company[]> {
@@ -152,6 +157,20 @@ export async function fetchCompanyApplicationGrants(
     .is("revoked_at", null);
   if (error) throw error;
   return (data ?? []) as CompanyApplicationGrant[];
+}
+
+/** Every currently-live application scope entry across every company —
+ * the Access tab's company matrix needs one query it can filter/group
+ * client-side, not N per-company queries (same "fetch everything once"
+ * pattern AccessMatrix already uses for personal grants). */
+export async function fetchAllCompanyApplicationGrants(): Promise<CompanyApplicationGrantRow[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("agv_company_applications")
+    .select("id, application_id, company_id")
+    .is("revoked_at", null);
+  if (error) throw error;
+  return (data ?? []) as CompanyApplicationGrantRow[];
 }
 
 /** Add an application to a company's scope. Fails if a live grant already

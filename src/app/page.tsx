@@ -49,7 +49,7 @@ export default function LoginPage() {
   const [oauthBusy, setOauthBusy] = useState(false);
 
   useEffect(() => {
-    if (hydrated && account) router.replace(roleHome(account.role));
+    if (hydrated && account) router.replace(roleHome(account.role, account.isCompanyManager));
   }, [hydrated, account, router]);
 
   useEffect(() => {

@@ -108,7 +108,9 @@ export default function SignUpPage() {
           setBusy(false);
           return;
         }
-        router.push(roleHome(result.role === "client" ? "client" : "staff"));
+        // A brand-new signup is never already a company manager — that flag
+        // only gets set later by an admin (setCompanyAssignment).
+        router.push(roleHome(result.role === "client" ? "client" : "staff", false));
         return;
       }
       // No session back: this only happens on the staff path, when this

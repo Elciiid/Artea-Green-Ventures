@@ -61,17 +61,21 @@ function recordsNav(role: Role, isCompanyManager: boolean): NavItem[] {
           label: "Applications",
           match: (p) => p === "/portal" || p.startsWith("/portal/applications"),
         },
-        // isCompanyManager alone, no explicit role check — company
-        // assignment is intended to be client-only, but nothing at the
-        // schema layer enforces that (company_id/is_company_manager are
-        // independent of role; see the defense-in-depth role filters added
-        // in 20260805160000/20260805170000, which exist precisely because a
-        // staff account CAN have is_company_manager set via a
-        // misconfigured /api/admin/set-company call). A misconfigured staff
-        // account would see this pill, but /portal/team's own
-        // requireCompanyManager + role gating still redirects them away —
-        // this pill showing is cosmetic, not an access-control gap.
-        ...(isCompanyManager
+        // Explicit role === "client" check alongside isCompanyManager —
+        // matching the same defense-in-depth pattern the DB layer already
+        // uses (agv_manager_company_id(), 20260805170000): company_id/
+        // is_company_manager are independent columns from role, so they can
+        // drift out of sync (found live, 2026-08-08 — /api/admin/set-role
+        // used to leave isCompanyManager: true dangling on an account moved
+        // off "client", so this nav kept showing "My Team" to a staff
+        // account with nowhere for it to actually lead; the route itself is
+        // now fixed to clear both columns together, but this check stays as
+        // a second line of defense against the same drift from any other
+        // path). /portal/team's own requireCompanyManager + role gating
+        // would still redirect a stale account away if they clicked it —
+        // this check is about not showing a dead-end link, not access
+        // control.
+        ...(role === "client" && isCompanyManager
           ? [
               {
                 href: "/portal/team",
@@ -83,11 +87,17 @@ function recordsNav(role: Role, isCompanyManager: boolean): NavItem[] {
       ];
 }
 
-// Shown for every role. Distinct from Home (/home — the logo's destination
-// and post-login default, roleHome() in src/lib/session.ts): this is the
-// per-role Dashboard content, not the landing page. Matches the reference
-// repo's own route split (index.tsx marketing page vs. dashboard.tsx) —
-// see docs/superpowers/plans/2026-08-07-artea-green-glow-reskin.md.
+// Shown only for admin and a client who manages their company (2026-08-08)
+// — staff and a plain client no longer have a Dashboard at all (see
+// Dashboard.tsx and each removed *HomeDashboard.tsx's own git history), so
+// there's nothing behind this link for them anymore; showing it regardless
+// would be exactly the "nav item with nowhere useful to lead" bug already
+// fixed once for My Team (see roleHome()'s own comment). Distinct from Home
+// (/home — the logo's destination and post-login default, roleHome() in
+// src/lib/session.ts): this is the per-role Dashboard content, not the
+// landing page. Matches the reference repo's own route split (index.tsx
+// marketing page vs. dashboard.tsx) — see docs/superpowers/plans/
+// 2026-08-07-artea-green-glow-reskin.md.
 const HOME_ITEM: NavItem = {
   href: "/dashboard",
   label: "Dashboard",
@@ -104,13 +114,16 @@ export default function AppShell({
   children,
 }: {
   expect?: Role | Role[];
-  /** Narrower than `expect`: gates on account.isCompanyManager in addition
-   * to (not instead of) any role check above. `expect` only takes
-   * `Role`/`Role[]`, and widening it to understand flags would be a larger
-   * refactor than this one flag-gated page warrants — so this is a separate,
-   * additive prop rather than a change to `expect`'s own shape. A regular
-   * client (isCompanyManager: false) hitting a page gated this way is
-   * redirected away exactly like a role mismatch. */
+  /** Narrower than `expect`: additionally requires account.isCompanyManager,
+   * but ONLY for a role === "client" account — an admin (or any other role
+   * `expect` allows through) is never subject to this check, since
+   * isCompanyManager is meaningless for non-client accounts by construction
+   * everywhere else in this app. This is what lets `/home`/`/dashboard` use
+   * `expect={["admin", "client"]} requireCompanyManager` to mean "admin,
+   * always; client, only if they manage their company" without also
+   * (wrongly) demanding admin accounts have a company-manager flag they
+   * never have. A regular client (isCompanyManager: false) hitting a page
+   * gated this way is redirected away exactly like a role mismatch. */
   requireCompanyManager?: boolean;
   /** Locks the shell to exactly the viewport height instead of a min-height
    * that grows with content — header/nav and footer stay pinned, and the
@@ -157,7 +170,7 @@ export default function AppShell({
   );
   const deniedByRole = (acc: NonNullable<typeof account>): boolean =>
     Boolean(allowedRoles && !allowedRoles.includes(acc.role)) ||
-    (requireCompanyManager && !acc.isCompanyManager);
+    (requireCompanyManager && acc.role === "client" && !acc.isCompanyManager);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -165,7 +178,7 @@ export default function AppShell({
       router.replace("/");
       return;
     }
-    if (deniedByRole(account)) router.replace(roleHome(account.role));
+    if (deniedByRole(account)) router.replace(roleHome(account.role, account.isCompanyManager));
     // deniedByRole is a plain function recomputed every render (reads
     // allowedRoles/requireCompanyManager, both already deps below via their
     // own stable inputs), not a stable dependency itself — see
@@ -199,7 +212,11 @@ export default function AppShell({
     );
   }
 
-  const nav = [HOME_ITEM, ...recordsNav(account.role, account.isCompanyManager)];
+  const hasDashboard = account.role === "admin" || account.isCompanyManager;
+  const nav = [
+    ...(hasDashboard ? [HOME_ITEM] : []),
+    ...recordsNav(account.role, account.isCompanyManager),
+  ];
 
   return (
     // min-h-full, not min-h-dvh: dvh is an absolute viewport unit, so it
@@ -238,7 +255,7 @@ export default function AppShell({
           className={`mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 py-3 sm:px-6 ${heroHeader ? "lg:px-10" : ""}`}
         >
           <div className="col-start-1 flex items-center gap-3">
-            <Link href={roleHome(account.role)} className="flex shrink-0 items-center gap-3">
+            <Link href={roleHome(account.role, account.isCompanyManager)} className="flex shrink-0 items-center gap-3">
               <Wordmark variant={heroHeader ? "white" : "green"} />
               {!heroHeader && (
                 <>
@@ -378,7 +395,13 @@ const DOCK_ICONS: Record<string, LucideIcon> = {
  * that reference has no documented mobile nav pattern at all. Each icon's
  * label shows in a Tooltip on hover; the icon + aria-label alone (not
  * hover text, which touch has no equivalent for) is what actually carries
- * meaning on a phone. */
+ * meaning on a phone.
+ *
+ * Renders nothing when there's at most one destination (2026-08-08) — a
+ * one-icon dock can't switch between anything, it just sits there always
+ * active. Became reachable once staff/a plain client lost the "Dashboard"
+ * nav item (see roleHome()'s own comment): their nav is now just
+ * ["Applications"], a single item, where it used to always be two. */
 function Dock({
   nav,
   pathname,
@@ -388,6 +411,8 @@ function Dock({
   pathname: string;
   light: boolean;
 }) {
+  if (nav.length <= 1) return null;
+
   return (
     <nav
       aria-label="Primary"

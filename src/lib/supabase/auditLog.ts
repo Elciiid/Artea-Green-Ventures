@@ -1,11 +1,11 @@
 // In-app activity (tab 2 of the admin activity log). agv_audit_log already
 // exists and is populated by triggers on agv_applications, agv_documents,
-// agv_activity_entries, and agv_application_access (20260722120000) — this
-// really is UI-only, unlike the sign-in/sign-up tab. Note: it does NOT cover
-// agv_profiles changes (name edits, role changes) or MFA enrollment — no
-// trigger writes those into this table today, so a "name changes, MFA
-// changes" tab isn't actually backed yet. This tab shows what the table
-// genuinely has: application/document/access-grant activity.
+// agv_activity_entries, agv_application_access (20260722120000), and — as
+// of 20260808110000 — agv_companies, agv_company_applications, and
+// agv_profiles (company create/delete, roster add/remove, manager-status
+// toggle, and, as a side effect of covering agv_profiles generally, name
+// edits and role changes too). This really is UI-only, unlike the
+// sign-in/sign-up tab.
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 
